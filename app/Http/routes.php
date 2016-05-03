@@ -14,3 +14,7 @@
 Route::get('/', function () {
     return view('welcome');
 });
+Route::get('/testMatch', 'MainController@testMatch');
+Route::get('/testProfit', 'MainController@testProfit');
+Route::get('/testLeague', 'MainController@testLeague');
+Route::get('/client', 'MainController@client');
