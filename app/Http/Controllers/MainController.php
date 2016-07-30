@@ -30,7 +30,7 @@ class MainController extends Controller
 
     public function testProfit()
     {
-        $id = 38;
+        $id = 1704;
         $matchLink = FootballMatch::find($id)->link;
         $url = 'http://www.bmbets.com'.$matchLink;
         $url = preg_replace_callback(
@@ -45,7 +45,6 @@ class MainController extends Controller
             'bet-city',
             'bet365',
             'betfair',
-            'betfair-sp',
             'marathon',
             'matchbook',
             'pinnaclesports',
@@ -206,12 +205,18 @@ class MainController extends Controller
                 ->where('football_match_id', $profitData['football_match_id'])
                 ->first()
             ) {
-                $profit->profit = $profitData['profit'];
-                $profit->text = $profitData['text'];
-                $profit->save();
-                continue;
+                if ($profitData['profit'] > 100) {
+                    $profit->profit = $profitData['profit'];
+                    $profit->text = $profitData['text'];
+                    $profit->save();
+                } else {
+                    $profit->delete();
+                }
+            } else {
+                if ($profitData['profit'] > 100) {
+                    FootballProfit::create($profitData);
+                }
             }
-            FootballProfit::create($profitData);
         }
         \DB::table('FootballProfits')
             ->where('football_match_id', $id)
@@ -223,13 +228,6 @@ class MainController extends Controller
     public function testLeague()
     {
         $url = 'http://www.bmbets.com/football/';
-        /*$client = Client::getInstance();
-        $client->getEngine()->addOption('--disk-cache=true');
-        $request = $client->getMessageFactory()->createRequest($url, 'GET');
-        $request->setTimeout(30000);
-        $response = $client->getMessageFactory()->createResponse();
-        $client->send($request, $response);*/
-
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
@@ -274,7 +272,7 @@ class MainController extends Controller
 
     public function testMatch()
     {
-        $id = 41;
+        $id = 8;
         $leagueLink = FootballLeague::find($id)->link;
         $url = 'http://www.bmbets.com'.$leagueLink;
         $ch = curl_init();

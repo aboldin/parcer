@@ -78,7 +78,6 @@ class WorkerRouteCommand extends Command
                 '1xbet',
                 'bet365',
                 'betfair',
-                'betfair-sp',
                 'marathon',
                 'matchbook',
                 'pinnaclesports',
@@ -239,12 +238,18 @@ class WorkerRouteCommand extends Command
                     ->where('football_match_id', $profitData['football_match_id'])
                     ->first()
                 ) {
-                    $profit->profit = $profitData['profit'];
-                    $profit->text = $profitData['text'];
-                    $profit->save();
-                    continue;
+                    if ($profitData['profit'] > 100) {
+                        $profit->profit = $profitData['profit'];
+                        $profit->text = $profitData['text'];
+                        $profit->save();
+                    } else {
+                        $profit->delete();
+                    }
+                } else {
+                    if ($profitData['profit'] > 100) {
+                        FootballProfit::create($profitData);
+                    }
                 }
-                FootballProfit::create($profitData);
             }
             \DB::table('FootballProfits')
                 ->where('football_match_id', $id)
