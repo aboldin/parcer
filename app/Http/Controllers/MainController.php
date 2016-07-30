@@ -11,9 +11,26 @@ use App\FootballProfit;
 
 class MainController extends Controller
 {
+    private function fix_json( $j )
+    {
+        $j = trim( $j );
+        $j = ltrim( $j, '(' );
+        $j = rtrim( $j, ')' );
+        $a = preg_split('#(?<!\\\\)\"#', $j );
+        for( $i=0; $i < count( $a ); $i+=2 ){
+            $s = $a[$i];
+            $s = preg_replace('#([^\s\[\]\{\}\:\,]+):#', '"\1":', $s );
+            $a[$i] = $s;
+        }
+        //var_dump($a);
+        $j = implode( '"', $a );
+        //var_dump( $j );
+        return $j;
+    }
+
     public function testProfit()
     {
-        $id = 1053;
+        $id = 38;
         $matchLink = FootballMatch::find($id)->link;
         $url = 'http://www.bmbets.com'.$matchLink;
         $url = preg_replace_callback(
@@ -34,86 +51,105 @@ class MainController extends Controller
             'pinnaclesports',
             'sbobet',
             'william-hill',
+            'favbet'
         );
-        foreach ($avaliable_bks as &$avaliable_bk) {
-            $avaliable_bk = '/bookmakers/'.$avaliable_bk.'/';
-        }
-        unset($avaliable_bk);
-        $client = Client::getInstance();
-        $client->getEngine()->addOption('--disk-cache=true');
-        $request = $client->getMessageFactory()->createRequest($url, 'GET');
-        $request->setTimeout(30000);
-        $response = $client->getMessageFactory()->createResponse();
-        $client->send($request, $response);
-
 
         $finalArray = array();
         $bests = array();
         $finalUserResponse = array();
 
-        if (($response->getStatus() === 200) || ($response->getStatus() === 408)) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        $output = curl_exec($ch);
+        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
 
-            $dom = HtmlDomParser::str_get_html($response->getContent());
-
-            $tabActive = $dom->find('#tabBetType ul .active', 0);
-            if ($tabActive->plaintext === '1x2') {
-                $rows = $dom->find('.odds-panel .odds-table tbody tr');
-                foreach ($rows as $key => $row) {
-                    if ($row->parent()->tag != 'tbody') continue;
-
-                    $bkname = $row->children(0)->find('.bm-info a')[0]->href;
-                    if (!in_array($bkname, $avaliable_bks)) continue;
-
-                    if (substr_count($row->children(1)->class, 'odd-lock') === 0) {
-                        $finalArray['1'][$bkname] = $row->children(1)->plaintext;
-                    }
-                    if (substr_count($row->children(2)->class, 'odd-lock') === 0) {
-                        $finalArray['X'][$bkname] = $row->children(2)->plaintext;
-                    }
-                    if (substr_count($row->children(3)->class, 'odd-lock') === 0) {
-                        $finalArray['2'][$bkname] = $row->children(3)->plaintext;
+        if (($httpcode === 200) || ($httpcode === 408)) {
+            preg_match('/(<script language="JavaScript">BMBets.Bookmakers =)(?<bookmakers>.*)(<\/script><script language="JavaScript">var dataObject = )(?<odds>.*)(;<\/script><script language="JavaScript">BMBets.EventId)/', $output, $matches);
+            $avaliable_bks_keys = array();
+            $json = $this->fix_json($matches['bookmakers']);
+            $json = str_replace("'", '"', $json);
+            $bookmakers = json_decode($json);
+            foreach ($bookmakers as $key => $bookmaker) {
+                if (in_array($bookmaker->url, $avaliable_bks)) {
+                    $avaliable_bks_keys[$bookmaker->url]=$key;
+                }
+            }
+            $flipped = array_flip($avaliable_bks_keys);
+            $json = $this->fix_json($matches['odds']);
+            $json = str_replace("'", '"', $json);
+            $odds = json_decode($json);
+            $template = array(
+                0 => "1",
+                1 => "X",
+                2 => "2"
+            );
+            if ($template === $odds->odds[0]->c) {
+                foreach($odds->odds[0]->r as $odd){
+                    if (in_array($odd->i,$avaliable_bks_keys)) {
+                        foreach ($odd->c as $oddc){
+                           if (!(property_exists($oddc, 'b')))
+                               $finalArray[$oddc->k][$flipped[$odd->i]] = $oddc->v;
+                        }
                     }
                 }
             }
-        } else {
-            dd($response);
         }
+
+        //==================================SECOND========================================
         $data = array(
             '__EVENTTARGET' => 'BET_TYPE',
             '__EVENTARGUMENT' => '6'
         );
-        $request->setMethod('POST');
-        $request->setUrl($url);
-        $request->setRequestData($data);
 
-        $client->send($request, $response);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        $output = curl_exec($ch);
+        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
 
-        if (($response->getStatus() === 200) || ($response->getStatus() === 408)) {
-
-            $dom = HtmlDomParser::str_get_html($response->getContent());
-
-            $tabActive = $dom->find('#tabBetType ul .active', 0);
-            if ($tabActive->plaintext === 'Double Chance') {
-                $rows = $dom->find('.odds-panel .odds-table tbody tr');
-                foreach ($rows as $key => $row) {
-                    if ($row->parent()->tag != 'tbody') continue;
-                    $bkname = $row->children(0)->find('.bm-info a')[0]->href;
-                    if (!in_array($bkname, $avaliable_bks)) continue;
-
-                    if (substr_count($row->children(1)->class, 'odd-lock') === 0) {
-                        $finalArray['1X'][$bkname] = $row->children(1)->plaintext;
-                    }
-                    if (substr_count($row->children(2)->class, 'odd-lock') === 0) {
-                        $finalArray['12'][$bkname] = $row->children(2)->plaintext;
-                    }
-                    if (substr_count($row->children(3)->class, 'odd-lock') === 0) {
-                        $finalArray['X2'][$bkname] = $row->children(3)->plaintext;
+        if (($httpcode === 200) || ($httpcode === 408)) {
+            preg_match('/(<script language="JavaScript">BMBets.Bookmakers =)(?<bookmakers>.*)(<\/script><script language="JavaScript">var dataObject = )(?<odds>.*)(;<\/script><script language="JavaScript">BMBets.EventId)/', $output, $matches);
+            $avaliable_bks_keys = array();
+            $json = $this->fix_json($matches['bookmakers']);
+            $json = str_replace("'", '"', $json);
+            $bookmakers = json_decode($json);
+            foreach ($bookmakers as $key => $bookmaker) {
+                if (in_array($bookmaker->url, $avaliable_bks)) {
+                    $avaliable_bks_keys[$bookmaker->url]=$key;
+                }
+            }
+            $flipped = array_flip($avaliable_bks_keys);
+            $json = $this->fix_json($matches['odds']);
+            $json = str_replace("'", '"', $json);
+            $odds = json_decode($json);
+            $template = array(
+                0 => "1X",
+                1 => "12",
+                2 => "X2"
+            );
+            if ($template === $odds->odds[0]->c) {
+                foreach($odds->odds[0]->r as $odd){
+                    if (in_array($odd->i,$avaliable_bks_keys)) {
+                        foreach ($odd->c as $oddc){
+                            if (!(property_exists($oddc, 'b')))
+                                $finalArray[$oddc->k][$flipped[$odd->i]] = $oddc->v;
+                        }
                     }
                 }
             }
-        } else {
-            dd($response);
         }
+
         foreach ($finalArray as $key => $value) {
             arsort($value);
             $bests[$key] = array(
@@ -121,6 +157,7 @@ class MainController extends Controller
                 'bet' => current($value),
             );
         }
+
         if (isset($bests['1']) && isset($bests['X']) && isset($bests['2']))
         {
             $finalUserResponse[] = array(
@@ -166,8 +203,8 @@ class MainController extends Controller
         foreach($finalUserResponse as $profitData) {
             $types[] = $profitData['type'];
             if ($profit = FootballProfit::where('type', $profitData['type'])
-                                        ->where('football_match_id', $profitData['football_match_id'])
-                                        ->first()
+                ->where('football_match_id', $profitData['football_match_id'])
+                ->first()
             ) {
                 $profit->profit = $profitData['profit'];
                 $profit->text = $profitData['text'];
@@ -179,23 +216,33 @@ class MainController extends Controller
         \DB::table('FootballProfits')
             ->where('football_match_id', $id)
             ->whereNotIn('type', $types)
-            ->delete();
-
+            ->delete()
+        ;
     }
 
     public function testLeague()
     {
         $url = 'http://www.bmbets.com/football/';
-        $client = Client::getInstance();
+        /*$client = Client::getInstance();
         $client->getEngine()->addOption('--disk-cache=true');
         $request = $client->getMessageFactory()->createRequest($url, 'GET');
         $request->setTimeout(30000);
         $response = $client->getMessageFactory()->createResponse();
-        $client->send($request, $response);
+        $client->send($request, $response);*/
 
-        if (($response->getStatus() === 200) || ($response->getStatus() === 408)) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        $output = curl_exec($ch);
+        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
 
-            $dom = HtmlDomParser::str_get_html($response->getContent());
+        if (($httpcode === 200) || ($httpcode === 408)) {
+
+            $dom = HtmlDomParser::str_get_html($output);
 
             $elements = $dom->find('.country-table .m-count');
             $links = array();
@@ -220,26 +267,29 @@ class MainController extends Controller
                 ->whereNotIn('link', $links)
                 ->delete();
         } else {
-            dd($response);
+            dd($output);
         }
 
     }
 
     public function testMatch()
     {
-        $id = 151;
+        $id = 41;
         $leagueLink = FootballLeague::find($id)->link;
         $url = 'http://www.bmbets.com'.$leagueLink;
-        $client = Client::getInstance();
-        $client->getEngine()->addOption('--disk-cache=true');
-        $request = $client->getMessageFactory()->createRequest($url, 'GET');
-        $request->setTimeout(30000);
-        $response = $client->getMessageFactory()->createResponse();
-        $client->send($request, $response);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        $output = curl_exec($ch);
+        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
 
-        if (($response->getStatus() === 200) || ($response->getStatus() === 408)) {
+        if (($httpcode === 200) || ($httpcode === 408)) {
 
-            $dom = HtmlDomParser::str_get_html($response->getContent());
+            $dom = HtmlDomParser::str_get_html($output);
 
             $elements = $dom->find('.odds-table tr a');
             $links = array();
@@ -261,7 +311,7 @@ class MainController extends Controller
                 ->delete();
 
         } else {
-            dd($response);
+            dd($output);
         }
 
     }
