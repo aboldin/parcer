@@ -40,33 +40,35 @@ class ClientRouteCommand extends Command
      */
     public function handle()
     {
-        $client = new \GearmanClient();
-        $client->addServer();
-        $start = microtime(true);
+        while (true) {
+            $client = new \GearmanClient();
+            $client->addServer();
+            $start = microtime(true);
 
-        $client->addTask('cli_leagues_football', 'lol');
+            $client->addTask('cli_leagues_football', 'lol');
 
-        $client->runTasks();
+            $client->runTasks();
 
-        $totaltime = number_format(microtime(true) - $start, 2);
-        dump("Got leagues in: $totaltime seconds");
+            $totaltime = number_format(microtime(true) - $start, 2);
+            dump("Got leagues in: $totaltime seconds");
 
-        foreach (FootballLeague::all() as $league) {
-            $client->addTask('cli_matches_football', (string)$league->id);
+            foreach (FootballLeague::all() as $league) {
+                $client->addTask('cli_matches_football', (string)$league->id);
+            }
+            $start = microtime(true);
+            $client->runTasks();
+
+            $totaltime = number_format(microtime(true) - $start, 2);
+            dump("Got matches in: $totaltime seconds");
+
+            foreach (FootballMatch::all() as $match) {
+                $client->addTask('cli_profits_football', (string)$match->id);
+            }
+            $start = microtime(true);
+            $client->runTasks();
+
+            $totaltime = number_format(microtime(true) - $start, 2);
+            dump("Got profits in: $totaltime seconds");
         }
-        $start = microtime(true);
-        $client->runTasks();
-
-        $totaltime = number_format(microtime(true) - $start, 2);
-        dump("Got matches in: $totaltime seconds");
-
-        foreach (FootballMatch::all() as $match) {
-            $client->addTask('cli_profits_football', (string)$match->id);
-        }
-        $start = microtime(true);
-        $client->runTasks();
-
-        $totaltime = number_format(microtime(true) - $start, 2);
-        dump("Got profits in: $totaltime seconds");
     }
 }
