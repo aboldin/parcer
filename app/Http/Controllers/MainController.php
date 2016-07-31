@@ -84,12 +84,14 @@ class MainController extends Controller
             $json = $this->fix_json($matches['odds']);
             $json = str_replace("'", '"', $json);
             $odds = json_decode($json);
-            if ($odds->odds[0]->t === $eventArg) {
-                foreach($odds->odds[0]->r as $odd){
-                    if (in_array($odd->i,$avaliable_bks_keys)) {
-                        foreach ($odd->c as $oddc){
-                           if (!(property_exists($oddc, 'b')))
-                               $finalArray[$oddc->k][$flipped[$odd->i]] = $oddc->v;
+            if ((property_exists($odds, 'odds'))) {
+                if ($odds->odds[0]->t === $eventArg) {
+                    foreach($odds->odds[0]->r as $odd){
+                        if (in_array($odd->i,$avaliable_bks_keys)) {
+                            foreach ($odd->c as $oddc){
+                                if (!(property_exists($oddc, 'b')))
+                                    $finalArray[$oddc->k][$flipped[$odd->i]] = $oddc->v;
+                            }
                         }
                     }
                 }
@@ -130,12 +132,14 @@ class MainController extends Controller
             $json = $this->fix_json($matches['odds']);
             $json = str_replace("'", '"', $json);
             $odds = json_decode($json);
-            if ($odds->odds[0]->t === $eventArg) {
-                foreach($odds->odds[0]->r as $odd){
-                    if (in_array($odd->i,$avaliable_bks_keys)) {
-                        foreach ($odd->c as $oddc){
-                            if (!(property_exists($oddc, 'b')))
-                                $finalArray[$oddc->k][$flipped[$odd->i]] = $oddc->v;
+            if ((property_exists($odds, 'odds'))) {
+                if ($odds->odds[0]->t === $eventArg) {
+                    foreach($odds->odds[0]->r as $odd){
+                        if (in_array($odd->i,$avaliable_bks_keys)) {
+                            foreach ($odd->c as $oddc){
+                                if (!(property_exists($oddc, 'b')))
+                                    $finalArray[$oddc->k][$flipped[$odd->i]] = $oddc->v;
+                            }
                         }
                     }
                 }
@@ -178,23 +182,81 @@ class MainController extends Controller
             $json = $this->fix_json($matches['odds']);
             $json = str_replace("'", '"', $json);
             $odds = json_decode($json);
-            foreach ($odds->odds as $partOdd) {
-                if ($partOdd->t === $eventArg) {
-                    foreach($partOdd->r as $odd){
-                        if (in_array($odd->i,$avaliable_bks_keys)) {
-                            foreach ($odd->c as $oddc){
-                                if (!(property_exists($oddc, 'b'))) {
-                                    $finalArray[$stringType.$partOdd->h.'('.$oddc->k.')'][$flipped[$odd->i]] = $oddc->v;
-                                    $ahTypes[] = $stringType.$partOdd->h;
+            if ((property_exists($odds, 'odds'))) {
+                foreach ($odds->odds as $partOdd) {
+                    if ($partOdd->t === $eventArg) {
+                        foreach($partOdd->r as $odd){
+                            if (in_array($odd->i,$avaliable_bks_keys)) {
+                                foreach ($odd->c as $oddc){
+                                    if (!(property_exists($oddc, 'b'))) {
+                                        $finalArray[$stringType.$partOdd->h.'('.$oddc->k.')'][$flipped[$odd->i]] = $oddc->v;
+                                        $ahTypes[] = $stringType.$partOdd->h;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                }
+            }
+            $ahTypes = array_unique($ahTypes);
+        }
+
+        //==================================Totals========================================
+        $stringType = 'OU';
+        $ouTypes = array();
+        $eventArg = 4;
+        $data = array(
+            '__EVENTTARGET' => 'BET_TYPE',
+            '__EVENTARGUMENT' => $eventArg
+        );
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        $output = curl_exec($ch);
+        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if (($httpcode === 200) || ($httpcode === 408)) {
+            preg_match('/(<script language="JavaScript">BMBets.Bookmakers =)(?<bookmakers>.*)(<\/script><script language="JavaScript">var dataObject = )(?<odds>.*)(;<\/script><script language="JavaScript">BMBets.EventId)/', $output, $matches);
+            $avaliable_bks_keys = array();
+            $json = $this->fix_json($matches['bookmakers']);
+            $json = str_replace("'", '"', $json);
+            $bookmakers = json_decode($json);
+            foreach ($bookmakers as $key => $bookmaker) {
+                if (in_array($bookmaker->url, $avaliable_bks)) {
+                    $avaliable_bks_keys[$bookmaker->url]=$key;
+                }
+            }
+            $flipped = array_flip($avaliable_bks_keys);
+            $json = $this->fix_json($matches['odds']);
+            $json = str_replace("'", '"', $json);
+            $odds = json_decode($json);
+            if ((property_exists($odds, 'odds'))) {
+                foreach ($odds->odds as $partOdd) {
+                    if ($partOdd->t === $eventArg) {
+                        foreach($partOdd->r as $odd){
+                            if (in_array($odd->i,$avaliable_bks_keys)) {
+                                foreach ($odd->c as $oddc){
+                                    if (!(property_exists($oddc, 'b'))) {
+                                        $finalArray[$stringType.$partOdd->h.'('.$oddc->k.')'][$flipped[$odd->i]] = $oddc->v;
+                                        $ouTypes[] = $stringType.$partOdd->h;
+                                    }
                                 }
                             }
                         }
                     }
                 }
-
             }
-            $ahTypes = array_unique($ahTypes);
+            $ouTypes = array_unique($ouTypes);
         }
+
         foreach ($finalArray as $key => $value) {
             arsort($value);
             $bests[$key] = array(
@@ -251,6 +313,18 @@ class MainController extends Controller
                 );
             }
         }
+        foreach ($ouTypes as $ouType) {
+            if (isset($bests[$ouType.'(Under)']) && isset($bests[$ouType.'(Under)'])) {
+                $finalUserResponse[] = array(
+                    'football_match_id' => $id,
+                    'type' => $ouType,
+                    'profit' => ((2 - (1/$bests[$ouType.'(Over)']['bet'] + 1/$bests[$ouType.'(Under)']['bet'])) * 100),
+                    'text' => $ouType.'(Over) - '.$bests[$ouType.'(Over)']['bk'].' => '.$bests[$ouType.'(Over)']['bet']."; \n".
+                        $ouType.'(Under) - '.$bests[$ouType.'(Under)']['bk'].' => '.$bests[$ouType.'(Under)']['bet']
+                );
+            }
+        }
+
         $types = array();
         foreach($finalUserResponse as $profitData) {
             $types[] = $profitData['type'];
