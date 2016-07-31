@@ -41,6 +41,20 @@ class WorkerRouteCommand extends Command
      * @return mixed
      */
 
+
+    private function wrapIt($id, $bests, $firstKey, $secondKey, $type)
+    {
+        if (isset($bests[$firstKey]) && isset($bests[$secondKey])) {
+            return array(
+                'football_match_id' => $id,
+                'type' => $type,
+                'profit' => ((2 - (1/$bests[$firstKey]['bet'] + 1/$bests[$secondKey]['bet'])) * 100),
+                'text' => $firstKey.' - '.$bests[$firstKey]['bk'].' => '.$bests[$firstKey]['bet']."; \n".
+                    $secondKey.' - '.$bests[$secondKey]['bk'].' => '.$bests[$secondKey]['bet']
+            );
+        } else return null;
+    }
+
     private function fix_json( $j )
     {
         $j = trim( $j );
