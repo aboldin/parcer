@@ -8,7 +8,7 @@ class FootballMatch extends Model
 {
 
     protected $fillable = [
-        'title', 'link', 'football_league_id'
+        'title', 'link', 'football_league_id', 'link_id'
     ];
     /**
      * The database table used by the model.

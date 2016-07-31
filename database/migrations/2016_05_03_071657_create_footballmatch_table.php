@@ -17,6 +17,7 @@ class CreateFootballmatchTable extends Migration
             $table->integer('football_league_id')->unsigned()->default(0);
             $table->string('title', 300)->default('');
             $table->string('link', 300)->default('');
+            $table->string('link_id', 30)->default('');
             $table->timestamps();
 
         });
