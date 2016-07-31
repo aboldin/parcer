@@ -90,6 +90,9 @@ class WorkerRouteCommand extends Command
             $bests = array();
             $finalUserResponse = array();
 
+            //==================================1x2========================================
+
+            $eventArg = 3;
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
@@ -115,12 +118,7 @@ class WorkerRouteCommand extends Command
                 $json = $this->fix_json($matches['odds']);
                 $json = str_replace("'", '"', $json);
                 $odds = json_decode($json);
-                $template = array(
-                    0 => "1",
-                    1 => "X",
-                    2 => "2"
-                );
-                if ($template === $odds->odds[0]->c) {
+                if ($odds->odds[0]->t === $eventArg) {
                     foreach($odds->odds[0]->r as $odd){
                         if (in_array($odd->i,$avaliable_bks_keys)) {
                             foreach ($odd->c as $oddc){
@@ -132,10 +130,11 @@ class WorkerRouteCommand extends Command
                 }
             }
 
-            //==================================SECOND========================================
+            //==================================DC========================================
+            $eventArg = 6;
             $data = array(
                 '__EVENTTARGET' => 'BET_TYPE',
-                '__EVENTARGUMENT' => '6'
+                '__EVENTARGUMENT' => $eventArg
             );
 
             $ch = curl_init();
@@ -165,12 +164,7 @@ class WorkerRouteCommand extends Command
                 $json = $this->fix_json($matches['odds']);
                 $json = str_replace("'", '"', $json);
                 $odds = json_decode($json);
-                $template = array(
-                    0 => "1X",
-                    1 => "12",
-                    2 => "X2"
-                );
-                if ($template === $odds->odds[0]->c) {
+                if ($odds->odds[0]->t === $eventArg) {
                     foreach($odds->odds[0]->r as $odd){
                         if (in_array($odd->i,$avaliable_bks_keys)) {
                             foreach ($odd->c as $oddc){
@@ -182,6 +176,59 @@ class WorkerRouteCommand extends Command
                 }
             }
 
+            //==================================Asian Handicap========================================
+            $stringType = 'AH';
+            $ahTypes = array();
+            $eventArg = 1;
+            $data = array(
+                '__EVENTTARGET' => 'BET_TYPE',
+                '__EVENTARGUMENT' => $eventArg
+            );
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
+            curl_setopt($ch, CURLOPT_HEADER, 0);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+            $output = curl_exec($ch);
+            $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if (($httpcode === 200) || ($httpcode === 408)) {
+                preg_match('/(<script language="JavaScript">BMBets.Bookmakers =)(?<bookmakers>.*)(<\/script><script language="JavaScript">var dataObject = )(?<odds>.*)(;<\/script><script language="JavaScript">BMBets.EventId)/', $output, $matches);
+                $avaliable_bks_keys = array();
+                $json = $this->fix_json($matches['bookmakers']);
+                $json = str_replace("'", '"', $json);
+                $bookmakers = json_decode($json);
+                foreach ($bookmakers as $key => $bookmaker) {
+                    if (in_array($bookmaker->url, $avaliable_bks)) {
+                        $avaliable_bks_keys[$bookmaker->url]=$key;
+                    }
+                }
+                $flipped = array_flip($avaliable_bks_keys);
+                $json = $this->fix_json($matches['odds']);
+                $json = str_replace("'", '"', $json);
+                $odds = json_decode($json);
+                foreach ($odds->odds as $partOdd) {
+                    if ($partOdd->t === $eventArg) {
+                        foreach($partOdd->r as $odd){
+                            if (in_array($odd->i,$avaliable_bks_keys)) {
+                                foreach ($odd->c as $oddc){
+                                    if (!(property_exists($oddc, 'b'))) {
+                                        $finalArray[$stringType.$partOdd->h.'('.$oddc->k.')'][$flipped[$odd->i]] = $oddc->v;
+                                        $ahTypes[] = $stringType.$partOdd->h;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                }
+                $ahTypes = array_unique($ahTypes);
+            }
             foreach ($finalArray as $key => $value) {
                 arsort($value);
                 $bests[$key] = array(
@@ -190,8 +237,7 @@ class WorkerRouteCommand extends Command
                 );
             }
 
-            if (isset($bests['1']) && isset($bests['X']) && isset($bests['2']))
-            {
+            if (isset($bests['1']) && isset($bests['X']) && isset($bests['2'])) {
                 $finalUserResponse[] = array(
                     'football_match_id' => $id,
                     'type' => '1_X_2',
@@ -201,8 +247,7 @@ class WorkerRouteCommand extends Command
                         '2 - '.$bests['2']['bk'].' => '.$bests['2']['bet']
                 );
             }
-            if (isset($bests['1X']) && isset($bests['2']))
-            {
+            if (isset($bests['1X']) && isset($bests['2'])) {
                 $finalUserResponse[] = array(
                     'football_match_id' => $id,
                     'type' => '1X_2',
@@ -211,8 +256,7 @@ class WorkerRouteCommand extends Command
                         '2 - '.$bests['2']['bk'].' => '.$bests['2']['bet']
                 );
             }
-            if (isset($bests['1']) && isset($bests['X2']))
-            {
+            if (isset($bests['1']) && isset($bests['X2'])) {
                 $finalUserResponse[] = array(
                     'football_match_id' => $id,
                     'type' => '1_X2',
@@ -221,8 +265,7 @@ class WorkerRouteCommand extends Command
                         'X2 - '.$bests['X2']['bk'].' => '.$bests['X2']['bet']
                 );
             }
-            if (isset($bests['1']) && isset($bests['X2']))
-            {
+            if (isset($bests['12']) && isset($bests['X'])) {
                 $finalUserResponse[] = array(
                     'football_match_id' => $id,
                     'type' => '12_X',
@@ -230,6 +273,17 @@ class WorkerRouteCommand extends Command
                     'text' => '12 - '.$bests['12']['bk'].' => '.$bests['12']['bet']."; \n".
                         'X - '.$bests['X']['bk'].' => '.$bests['X']['bet']
                 );
+            }
+            foreach ($ahTypes as $ahType) {
+                if (isset($bests[$ahType.'(1)']) && isset($bests[$ahType.'(2)'])) {
+                    $finalUserResponse[] = array(
+                        'football_match_id' => $id,
+                        'type' => $ahType,
+                        'profit' => ((2 - (1/$bests[$ahType.'(1)']['bet'] + 1/$bests[$ahType.'(2)']['bet'])) * 100),
+                        'text' => $ahType.'(1) - '.$bests[$ahType.'(1)']['bk'].' => '.$bests[$ahType.'(1)']['bet']."; \n".
+                            $ahType.'(2) - '.$bests[$ahType.'(2)']['bk'].' => '.$bests[$ahType.'(2)']['bet']
+                    );
+                }
             }
             $types = array();
             foreach($finalUserResponse as $profitData) {
