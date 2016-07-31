@@ -229,7 +229,6 @@ class WorkerRouteCommand extends Command
                                 if (in_array($odd->i,$avaliable_bks_keys)) {
                                     foreach ($odd->c as $oddc){
                                         if ($oddc->b == 0) {
-
                                             $finalArray[$stringType.$partOdd->h.'('.$oddc->k.')'][$flipped[$odd->i]] = $oddc->v;
                                             $ouTypes[] = $stringType.$partOdd->h;
                                         }
@@ -241,6 +240,43 @@ class WorkerRouteCommand extends Command
                 }
                 $ouTypes = array_unique($ouTypes);
             }
+            //==================================DNB========================================
+            $stringType = 'DNB';
+            $eventArg = 35;
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
+            curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
+            curl_setopt($ch, CURLOPT_HEADER, 0);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, array(
+                'eId' => $matchId,
+                'bId' => $eventArg
+            ));
+            $output = curl_exec($ch);
+            $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if (($httpcode === 200) || ($httpcode === 408)) {
+                $odds = json_decode($output);
+                if ((property_exists($odds, 'odds'))) {
+                    foreach ($odds->odds as $partOdd) {
+                        if ($partOdd->t === $eventArg) {
+                            foreach($partOdd->r as $odd){
+                                if (in_array($odd->i,$avaliable_bks_keys)) {
+                                    foreach ($odd->c as $oddc){
+                                        if ($oddc->b == 0) {
+                                            $finalArray[$stringType.'('.$oddc->k.')'][$flipped[$odd->i]] = $oddc->v;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
 
             foreach ($finalArray as $key => $value) {
                 arsort($value);
@@ -260,72 +296,40 @@ class WorkerRouteCommand extends Command
                         '2 - '.$bests['2']['bk'].' => '.$bests['2']['bet']
                 );
             }
-            if (isset($bests['1X']) && isset($bests['2'])) {
-                $finalUserResponse[] = array(
-                    'football_match_id' => $id,
-                    'type' => '1X_2',
-                    'profit' => ((2 - (1/$bests['1X']['bet'] + 1/$bests['2']['bet'])) * 100),
-                    'text' => '1X - '.$bests['1X']['bk'].' => '.$bests['1X']['bet']."; \n".
-                        '2 - '.$bests['2']['bk'].' => '.$bests['2']['bet']
-                );
-            }
-            if (isset($bests['1']) && isset($bests['X2'])) {
-                $finalUserResponse[] = array(
-                    'football_match_id' => $id,
-                    'type' => '1_X2',
-                    'profit' => ((2 - (1/$bests['1']['bet'] + 1/$bests['X2']['bet'])) * 100),
-                    'text' => '1 - '.$bests['1']['bk'].' => '.$bests['1']['bet']."; \n".
-                        'X2 - '.$bests['X2']['bk'].' => '.$bests['X2']['bet']
-                );
-            }
-            if (isset($bests['12']) && isset($bests['X'])) {
-                $finalUserResponse[] = array(
-                    'football_match_id' => $id,
-                    'type' => '12_X',
-                    'profit' => ((2 - (1/$bests['12']['bet'] + 1/$bests['X']['bet'])) * 100),
-                    'text' => '12 - '.$bests['12']['bk'].' => '.$bests['12']['bet']."; \n".
-                        'X - '.$bests['X']['bk'].' => '.$bests['X']['bet']
-                );
-            }
+            $finalUserResponse[] = $this->wrapIt($id, $bests, '1X', '2', '1X_2');
+            $finalUserResponse[] = $this->wrapIt($id, $bests, '1', 'X2', '1_X2');
+            $finalUserResponse[] = $this->wrapIt($id, $bests, '12', 'X', '12_X');
+
             foreach ($ahTypes as $ahType) {
-                if (isset($bests[$ahType.'(1)']) && isset($bests[$ahType.'(2)'])) {
-                    $finalUserResponse[] = array(
-                        'football_match_id' => $id,
-                        'type' => $ahType,
-                        'profit' => ((2 - (1/$bests[$ahType.'(1)']['bet'] + 1/$bests[$ahType.'(2)']['bet'])) * 100),
-                        'text' => $ahType.'(1) - '.$bests[$ahType.'(1)']['bk'].' => '.$bests[$ahType.'(1)']['bet']."; \n".
-                            $ahType.'(2) - '.$bests[$ahType.'(2)']['bk'].' => '.$bests[$ahType.'(2)']['bet']
-                    );
-                }
+                $finalUserResponse[] = $this->wrapIt($id, $bests, $ahType.'(1)', $ahType.'(2)', $ahType);
             }
             foreach ($ouTypes as $ouType) {
-                if (isset($bests[$ouType.'(Under)']) && isset($bests[$ouType.'(Under)'])) {
-                    $finalUserResponse[] = array(
-                        'football_match_id' => $id,
-                        'type' => $ouType,
-                        'profit' => ((2 - (1/$bests[$ouType.'(Over)']['bet'] + 1/$bests[$ouType.'(Under)']['bet'])) * 100),
-                        'text' => $ouType.'(Over) - '.$bests[$ouType.'(Over)']['bk'].' => '.$bests[$ouType.'(Over)']['bet']."; \n".
-                            $ouType.'(Under) - '.$bests[$ouType.'(Under)']['bk'].' => '.$bests[$ouType.'(Under)']['bet']
-                    );
-                }
+                $finalUserResponse[] = $this->wrapIt($id, $bests, $ouType.'(Under)', $ouType.'(Over)', $ouType);
             }
+            $finalUserResponse[] = $this->wrapIt($id, $bests, 'DNB(1)', 'DNB(2)', 'DNB1-DNB2');
+            $finalUserResponse[] = $this->wrapIt($id, $bests, 'DNB(1)', 'AH0(2)', 'DNB1-AH2(0)');
+            $finalUserResponse[] = $this->wrapIt($id, $bests, 'AH0(1)', 'DNB(2)', 'AH1(0)-DNB2');
+
+
             $types = array();
             foreach($finalUserResponse as $profitData) {
-                $types[] = $profitData['type'];
-                if ($profit = FootballProfit::where('type', $profitData['type'])
-                    ->where('football_match_id', $profitData['football_match_id'])
-                    ->first()
-                ) {
-                    if ($profitData['profit'] > 100) {
-                        $profit->profit = $profitData['profit'];
-                        $profit->text = $profitData['text'];
-                        $profit->save();
+                if ($profitData) {
+                    $types[] = $profitData['type'];
+                    if ($profit = FootballProfit::where('type', $profitData['type'])
+                        ->where('football_match_id', $profitData['football_match_id'])
+                        ->first()
+                    ) {
+                        if ($profitData['profit'] > 100) {
+                            $profit->profit = $profitData['profit'];
+                            $profit->text = $profitData['text'];
+                            $profit->save();
+                        } else {
+                            $profit->delete();
+                        }
                     } else {
-                        $profit->delete();
-                    }
-                } else {
-                    if ($profitData['profit'] > 100) {
-                        FootballProfit::create($profitData);
+                        if ($profitData['profit'] > 101) {
+                            FootballProfit::create($profitData);
+                        }
                     }
                 }
             }
