@@ -142,8 +142,7 @@ class MainController extends Controller
             'matchbook',
             'pinnaclesports',
             'sbobet',
-            'william-hill',
-            'favbet'
+            'william-hill'
         );
         $avaliable_bks_keys = array();
         $json = '{"1":{"id":1,"name":"Betfair","url":"betfair","isAff":true},
@@ -355,7 +354,7 @@ class MainController extends Controller
                     ->where('football_match_id', $profitData['football_match_id'])
                     ->first()
                 ) {
-                    if ($profitData['profit'] > 100) {
+                    if ($profitData['profit'] > 101) {
                         $profit->profit = $profitData['profit'];
                         $profit->text = $profitData['text'];
                         $profit->save();
