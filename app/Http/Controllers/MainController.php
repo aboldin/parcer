@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Sunra\PhpSimple\HtmlDomParser;
-use JonnyW\PhantomJs\Client;
-use App\FootballLeague;
-use App\FootballMatch;
-use App\FootballProfit;
+use App\League;
+use App\Match;
+use App\Profit;
+use App\SportType;
 
 class MainController extends Controller
 {
@@ -15,7 +15,7 @@ class MainController extends Controller
     {
         if (isset($bests[$firstKey]) && isset($bests[$secondKey])) {
             return array(
-                'football_match_id' => $id,
+                'match_id' => $id,
                 'type' => $type,
                 'profit' => ((2 - (1/$bests[$firstKey]['bet'] + 1/$bests[$secondKey]['bet'])) * 100),
                 'text' => $firstKey.' - '.$bests[$firstKey]['bk'].' => '.$bests[$firstKey]['bet']."; \n".
@@ -28,7 +28,7 @@ class MainController extends Controller
     {
         if (isset($bests[$firstKey]) && isset($bests[$secondKey]) && isset($bests[$thirdKey])) {
             return array(
-                'football_match_id' => $id,
+                'match_id' => $id,
                 'type' => $type,
                 'profit' => ((2 - (1/$bests[$firstKey]['bet'] + 1/$bests[$secondKey]['bet'] + 1/$bests[$thirdKey]['bet'])) * 100),
                 'text' => $firstKey.' - '.$bests[$firstKey]['bk'].' => '.$bests[$firstKey]['bet']."; \n".
@@ -72,7 +72,7 @@ class MainController extends Controller
 
         if (($httpcode === 200) || ($httpcode === 408)) {
             $odds = json_decode($output);
-            if ((property_exists($odds, 'odds'))) {
+            if (($odds) && (property_exists($odds, 'odds'))) {
                 if ($odds->odds[0]->t === $eventArg) {
                     foreach($odds->odds[0]->r as $odd){
                         if (in_array($odd->i,$avaliable_bks_keys)) {
@@ -110,7 +110,7 @@ class MainController extends Controller
         curl_close($ch);
         if (($httpcode === 200) || ($httpcode === 408)) {
             $odds = json_decode($output);
-            if ((property_exists($odds, 'odds'))) {
+            if (($odds) && (property_exists($odds, 'odds'))) {
                 foreach ($odds->odds as $partOdd) {
                     if ($partOdd->t === $eventArg) {
                         foreach($partOdd->r as $odd){
@@ -132,8 +132,11 @@ class MainController extends Controller
     }
     public function testProfit()
     {
-        $id = 39;
-        $matchId = FootballMatch::find($id)->link_id;
+        $id = 4;
+        $match = Match::find($id);
+        $matchId = $match->link_id;
+        $matchTypeId = $match->league->sport_type_id;
+
         $avaliable_bks = array(
             '1xbet',
             'bet365',
@@ -229,129 +232,132 @@ class MainController extends Controller
         $bests = array();
         $finalUserResponse = array();
 
-        //==================================1x2========================================
+        if ($matchTypeId == 1) {
+            //==================================1x2========================================
 
-        $eventArg = 3;
-        $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped);
+            $eventArg = 3;
+            $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped);
 
 
-        //==================================DC========================================
+            //==================================DC========================================
 
-        $eventArg = 6;
-        $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped);
+            $eventArg = 6;
+            $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped);
 
-        //==================================Asian Handicap========================================
+            //==================================Asian Handicap========================================
 
-        $stringType = 'AH';
-        $ahTypes = array();
-        $eventArg = 1;
-        $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $ahTypes);
+            $stringType = 'AH';
+            $ahTypes = array();
+            $eventArg = 1;
+            $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $ahTypes);
 
-        //==================================Totals========================================
+            //==================================Totals========================================
 
-        $stringType = 'OU';
-        $ouTypes = array();
-        $eventArg = 4;
-        $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $ouTypes);
+            $stringType = 'OU';
+            $ouTypes = array();
+            $eventArg = 4;
+            $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $ouTypes);
 
-        //==================================DNB========================================
+            //==================================DNB========================================
 
-        $stringType = 'DNB';
-        $eventArg = 35;
-        $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType);
+            $stringType = 'DNB';
+            $eventArg = 35;
+            $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType);
 
-        //======================================Both teams to score============================================
+            //======================================Both teams to score============================================
 
-        $stringType = 'BTTS';
-        $eventArg = 304;
-        $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType);
+            $stringType = 'BTTS';
+            $eventArg = 304;
+            $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType);
 
-        //==================================Highest scoring half==================================
+            //==================================Highest scoring half==================================
 
-        $stringType = 'HSH';
-        $eventArg = 383;
-        $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType);
+            $stringType = 'HSH';
+            $eventArg = 383;
+            $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType);
 
-        //================================Home team total goals================================
+            //================================Home team total goals================================
 
-        $stringType = 'HTTG';
-        $eventArg = 101;
-        $httgTypes = array();
-        $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $httgTypes);
+            $stringType = 'HTTG';
+            $eventArg = 101;
+            $httgTypes = array();
+            $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $httgTypes);
 
-        //================================Away team total goals==================================
+            //================================Away team total goals==================================
 
-        $stringType = 'ATTG';
-        $eventArg = 102;
-        $attgTypes = array();
-        $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $attgTypes);
+            $stringType = 'ATTG';
+            $eventArg = 102;
+            $attgTypes = array();
+            $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $attgTypes);
 
-        //================================Home team score a goal================================
+            //================================Home team score a goal================================
 
-        $stringType = 'HTSG';
-        $eventArg = 305;
-        $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType);
+            $stringType = 'HTSG';
+            $eventArg = 305;
+            $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType);
 
-        //================================Away team score a goal==================================
+            //================================Away team score a goal==================================
 
-        $stringType = 'ATSG';
-        $eventArg = 306;
-        $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType);
+            $stringType = 'ATSG';
+            $eventArg = 306;
+            $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType);
 
+            foreach ($finalArray as $key => $value) {
+                arsort($value);
+                $bests[$key] = array(
+                    'bk' => key($value),
+                    'bet' => current($value),
+                );
+            }
+
+            $finalUserResponse[] = $this->wrapIt3($id, $bests, '1', 'X', '2', '1_X_2');
+            $finalUserResponse[] = $this->wrapIt($id, $bests, '1X', '2', '1X_2');
+            $finalUserResponse[] = $this->wrapIt($id, $bests, '1', 'X2', '1_X2');
+            $finalUserResponse[] = $this->wrapIt($id, $bests, '12', 'X', '12_X');
+            foreach ($ahTypes as $ahType) {
+                $finalUserResponse[] = $this->wrapIt($id, $bests, $ahType.'(1)', $ahType.'(2)', $ahType);
+            }
+            foreach ($ouTypes as $ouType) {
+                $finalUserResponse[] = $this->wrapIt($id, $bests, $ouType.'(Under)', $ouType.'(Over)', $ouType);
+            }
+            $finalUserResponse[] = $this->wrapIt($id, $bests, 'DNB(1)', 'DNB(2)', 'DNB1-DNB2');
+            $finalUserResponse[] = $this->wrapIt($id, $bests, 'DNB(1)', 'AH0(2)', 'DNB1-AH2(0)');
+            $finalUserResponse[] = $this->wrapIt($id, $bests, 'AH0(1)', 'DNB(2)', 'AH1(0)-DNB2');
+            $finalUserResponse[] = $this->wrapIt($id, $bests, 'BTTS(Yes)', 'BTTS(No)', 'BTTS');
+            $finalUserResponse[] = $this->wrapIt3($id, $bests, 'HSH(1st Half)', 'HSH(X)', 'HSH(2nd Half)', 'HSH');
+            foreach ($httgTypes as $httgType) {
+                $finalUserResponse[] = $this->wrapIt($id, $bests, $httgType . '(Under)', $httgType . '(Over)', $httgType);
+            }
+            foreach ($attgTypes as $attgType) {
+                $finalUserResponse[] = $this->wrapIt($id, $bests, $attgType.'(Under)', $attgType.'(Over)', $attgType);
+            }
+            $finalUserResponse[] = $this->wrapIt($id, $bests, 'HTSG(Yes)', 'HTSG(No)', 'HTSG');
+            $finalUserResponse[] = $this->wrapIt($id, $bests, 'ATSG(Yes)', 'ATSG(No)', 'ATSG');
+
+
+        } elseif ($matchTypeId == 2) {
+
+            $eventArg = 5;
+            $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped);
+
+            foreach ($finalArray as $key => $value) {
+                arsort($value);
+                $bests[$key] = array(
+                    'bk' => key($value),
+                    'bet' => current($value),
+                );
+            }
+
+            $finalUserResponse[] = $this->wrapIt($id, $bests, '1', '2', '1_2');
+        }
         //=======================================================================================
-
-
-        foreach ($finalArray as $key => $value) {
-            arsort($value);
-            $bests[$key] = array(
-                'bk' => key($value),
-                'bet' => current($value),
-            );
-        }
-
-        $finalUserResponse[] = $this->wrapIt3($id, $bests, '1', 'X', '2', '1_X_2');
-
-        $finalUserResponse[] = $this->wrapIt($id, $bests, '1X', '2', '1X_2');
-
-        $finalUserResponse[] = $this->wrapIt($id, $bests, '1', 'X2', '1_X2');
-
-        $finalUserResponse[] = $this->wrapIt($id, $bests, '12', 'X', '12_X');
-
-        foreach ($ahTypes as $ahType) {
-            $finalUserResponse[] = $this->wrapIt($id, $bests, $ahType.'(1)', $ahType.'(2)', $ahType);
-        }
-
-        foreach ($ouTypes as $ouType) {
-            $finalUserResponse[] = $this->wrapIt($id, $bests, $ouType.'(Under)', $ouType.'(Over)', $ouType);
-        }
-
-        $finalUserResponse[] = $this->wrapIt($id, $bests, 'DNB(1)', 'DNB(2)', 'DNB1-DNB2');
-
-        $finalUserResponse[] = $this->wrapIt($id, $bests, 'DNB(1)', 'AH0(2)', 'DNB1-AH2(0)');
-
-        $finalUserResponse[] = $this->wrapIt($id, $bests, 'AH0(1)', 'DNB(2)', 'AH1(0)-DNB2');
-
-        $finalUserResponse[] = $this->wrapIt($id, $bests, 'BTTS(Yes)', 'BTTS(No)', 'BTTS');
-
-        $finalUserResponse[] = $this->wrapIt3($id, $bests, 'HSH(1st Half)', 'HSH(X)', 'HSH(2nd Half)', 'HSH');
-
-        foreach ($httgTypes as $httgType) {
-            $finalUserResponse[] = $this->wrapIt($id, $bests, $httgType.'(Under)', $httgType.'(Over)', $httgType);
-        }
-        foreach ($attgTypes as $attgType) {
-            $finalUserResponse[] = $this->wrapIt($id, $bests, $attgType.'(Under)', $attgType.'(Over)', $attgType);
-        }
-
-        $finalUserResponse[] = $this->wrapIt($id, $bests, 'HTSG(Yes)', 'HTSG(No)', 'HTSG');
-
-        $finalUserResponse[] = $this->wrapIt($id, $bests, 'ATSG(Yes)', 'ATSG(No)', 'ATSG');
 
         $types = array();
         foreach($finalUserResponse as $profitData) {
             if ($profitData) {
                 $types[] = $profitData['type'];
-                if ($profit = FootballProfit::where('type', $profitData['type'])
-                    ->where('football_match_id', $profitData['football_match_id'])
+                if ($profit = Profit::where('type', $profitData['type'])
+                    ->where('match_id', $profitData['match_id'])
                     ->first()
                 ) {
                     if ($profitData['profit'] > 101) {
@@ -363,13 +369,13 @@ class MainController extends Controller
                     }
                 } else {
                     if ($profitData['profit'] > 101) {
-                        FootballProfit::create($profitData);
+                        Profit::create($profitData);
                     }
                 }
             }
         }
-        \DB::table('FootballProfits')
-            ->where('football_match_id', $id)
+        \DB::table('Profits')
+            ->where('match_id', $id)
             ->whereNotIn('type', $types)
             ->delete()
         ;
@@ -377,53 +383,55 @@ class MainController extends Controller
 
     public function testLeague()
     {
-        $url = 'http://www.bmbets.com/football/';
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        $output = curl_exec($ch);
-        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        foreach (SportType::all() as $type) {
+            $url = 'http://www.bmbets.com/'.$type->url.'/';
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
+            curl_setopt($ch, CURLOPT_HEADER, 0);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            $output = curl_exec($ch);
+            $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
-        if (($httpcode === 200) || ($httpcode === 408)) {
+            if (($httpcode === 200) || ($httpcode === 408)) {
 
-            $dom = HtmlDomParser::str_get_html($output);
+                $dom = HtmlDomParser::str_get_html($output);
 
-            $elements = $dom->find('.country-table .m-count');
-            $links = array();
-            foreach ($elements as $key => $elem) {
-                $count = preg_replace("/[^0-9]/", '', $elem->plaintext);
-                $link = $elem->parent()->find('a', 0);
-                $links[] = $link->href;
-                if ($league = FootballLeague::where('link', $link->href)->first()) {
-                    $league->count = $count;
-                    $league->save();
-                    continue;
+                $elements = $dom->find('.country-table .m-count');
+                $links = array();
+                foreach ($elements as $key => $elem) {
+                    $count = preg_replace("/[^0-9]/", '', $elem->plaintext);
+                    $link = $elem->parent()->find('a', 0);
+                    $links[] = $link->href;
+                    if ($league = League::where('link', $link->href)->first()) {
+                        $league->count = $count;
+                        $league->save();
+                        continue;
+                    }
+                    $leagueData = array(
+                        'title' => $link->plaintext,
+                        'link' => $link->href,
+                        'count' => $count,
+                        'sport_type_id' => $type->id,
+                    );
+                    League::create($leagueData);
                 }
-                $leagueData = array(
-                    'title' => $link->plaintext,
-                    'link' => $link->href,
-                    'count' => $count,
-                );
-                FootballLeague::create($leagueData);
+                \DB::table('Leagues')
+                    ->where('sport_type_id', $type->id)
+                    ->whereNotIn('link', $links)
+                    ->delete();
+            } else {
+                dd($output);
             }
-            //FootballLeague::whereNotIn('link', $links)->delete();
-            \DB::table('FootballLeagues')
-                ->whereNotIn('link', $links)
-                ->delete();
-        } else {
-            dd($output);
         }
-
     }
 
     public function testMatch()
     {
-        $id = 7;
-        $leagueLink = FootballLeague::find($id)->link;
+        $id = 270;
+        $leagueLink = League::find($id)->link;
         $url = 'http://www.bmbets.com'.$leagueLink;
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -445,19 +453,19 @@ class MainController extends Controller
                 preg_match('/^.*(?<link_id>\d+)\/?$/isU', $elem->href, $matches);
                 $link_id = $matches['link_id'];
                 $links[] = $elem->href;
-                if ($match = FootballMatch::where('link', $elem->href)->first()) {
+                if ($match = Match::where('link', $elem->href)->first()) {
                     continue;
                 }
                 $matchData = array(
-                    'football_league_id' => $id,
+                    'league_id' => $id,
                     'title' => $elem->plaintext,
                     'link' => $elem->href,
                     'link_id' => $link_id,
                 );
-                FootballMatch::create($matchData);
+                Match::create($matchData);
             }
-            \DB::table('FootballMatches')
-                ->where('football_league_id', $id)
+            \DB::table('Matches')
+                ->where('league_id', $id)
                 ->whereNotIn('link', $links)
                 ->delete();
 
@@ -473,15 +481,15 @@ class MainController extends Controller
         $client->addServer();
         $start = microtime(true);
 
-        $client->addTask('cli_leagues_football', 'lol');
+        $client->addTask('cli_leagues', 'lol');
 
         $client->runTasks();
 
         $totaltime = number_format(microtime(true) - $start, 2);
         dump("Got leagues in: $totaltime seconds");
 
-        foreach (FootballLeague::all() as $league) {
-            $client->addTask('cli_matches_football', (string)$league->id);
+        foreach (League::all() as $league) {
+            $client->addTask('cli_matches', (string)$league->id);
         }
         $start = microtime(true);
         $client->runTasks();
@@ -489,8 +497,8 @@ class MainController extends Controller
         $totaltime = number_format(microtime(true) - $start, 2);
         dump("Got matches in: $totaltime seconds");
 
-        foreach (FootballMatch::all() as $match) {
-            $client->addTask('cli_profits_football', (string)$match->id);
+        foreach (Match::all() as $match) {
+            $client->addTask('cli_profits', (string)$match->id);
         }
         $start = microtime(true);
         $client->runTasks();
