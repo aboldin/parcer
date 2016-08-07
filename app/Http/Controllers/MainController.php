@@ -337,8 +337,77 @@ class MainController extends Controller
 
         } elseif ($matchTypeId == 2) {
 
+            $stringType = 'FullTime';
             $eventArg = 5;
-            $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped);
+            $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType);
+
+            $stringType = '1stSet';
+            $eventArg = 7;
+            $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType);
+
+            $stringType = '2ndSet';
+            $eventArg = 8;
+            $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType);
+
+            $stringType = 'AH(Set)';
+            $ahsTypes = array();
+            $eventArg = 21;
+            $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $ahsTypes);
+
+            $stringType = 'AH(Game)';
+            $ahgTypes = array();
+            $eventArg = 22;
+            $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $ahgTypes);
+
+            $stringType = 'AH(1st Set)';
+            $ahs1Types = array();
+            $eventArg = 17;
+            $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $ahs1Types);
+
+            $stringType = 'AH(2nd Set)';
+            $ahs2Types = array();
+            $eventArg = 18;
+            $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $ahs2Types);
+
+            $stringType = 'AH(3rd Set)';
+            $ahs3Types = array();
+            $eventArg = 19;
+            $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $ahs3Types);
+
+            $stringType = 'AH(4th Set)';
+            $ahs4Types = array();
+            $eventArg = 20;
+            $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $ahs4Types);
+
+            $stringType = 'OU(Total Sets)';
+            $outsTypes = array();
+            $eventArg = 23;
+            $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $outsTypes);
+
+            $stringType = 'OU(Total Games)';
+            $outgTypes = array();
+            $eventArg = 26;
+            $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $outgTypes);
+
+            $stringType = 'OU(1st Set Games)';
+            $ou1sTypes = array();
+            $eventArg = 24;
+            $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $ou1sTypes);
+
+            $stringType = 'OU(2nd Set Games)';
+            $ou2sTypes = array();
+            $eventArg = 25;
+            $this->multiSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, $ou2sTypes);
+
+            $stringType = 'TB';
+            $eventArg = 11;
+            $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType);
+
+
+            $stringType = 'TB(1st Set)';
+            $eventArg = 99;
+            $this->singleSearch($finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType);
+
 
             foreach ($finalArray as $key => $value) {
                 arsort($value);
@@ -348,7 +417,41 @@ class MainController extends Controller
                 );
             }
 
-            $finalUserResponse[] = $this->wrapIt($id, $bests, '1', '2', '1_2');
+            $finalUserResponse[] = $this->wrapIt($id, $bests, 'FullTime(1)', 'FullTime(2)', 'FullTime');
+            $finalUserResponse[] = $this->wrapIt($id, $bests, '1stSet(1)', '1stSet(2)', '1stSet');
+            $finalUserResponse[] = $this->wrapIt($id, $bests, '2ndSet(1)', '2ndSet(2)', '2ndSet');
+            foreach ($ahsTypes as $type) {
+                $finalUserResponse[] = $this->wrapIt($id, $bests, $type.'(1)', $type.'(2)', $type);
+            }
+            foreach ($ahgTypes as $type) {
+                $finalUserResponse[] = $this->wrapIt($id, $bests, $type.'(1)', $type.'(2)', $type);
+            }
+            foreach ($ahs1Types as $type) {
+                $finalUserResponse[] = $this->wrapIt($id, $bests, $type.'(1)', $type.'(2)', $type);
+            }
+            foreach ($ahs2Types as $type) {
+                $finalUserResponse[] = $this->wrapIt($id, $bests, $type.'(1)', $type.'(2)', $type);
+            }
+            foreach ($ahs3Types as $type) {
+                $finalUserResponse[] = $this->wrapIt($id, $bests, $type.'(1)', $type.'(2)', $type);
+            }
+            foreach ($ahs4Types as $type) {
+                $finalUserResponse[] = $this->wrapIt($id, $bests, $type.'(1)', $type.'(2)', $type);
+            }
+            foreach ($outsTypes as $type) {
+                $finalUserResponse[] = $this->wrapIt($id, $bests, $type.'(Over)', $type.'(Under)', $type);
+            }
+            foreach ($outgTypes as $type) {
+                $finalUserResponse[] = $this->wrapIt($id, $bests, $type.'(Over)', $type.'(Under)', $type);
+            }
+            foreach ($ou1sTypes as $type) {
+                $finalUserResponse[] = $this->wrapIt($id, $bests, $type.'(Over)', $type.'(Under)', $type);
+            }
+            foreach ($ou2sTypes as $type) {
+                $finalUserResponse[] = $this->wrapIt($id, $bests, $type.'(Over)', $type.'(Under)', $type);
+            }
+            $finalUserResponse[] = $this->wrapIt($id, $bests, 'TB(Yes)', 'TB(No)', 'TB');
+            $finalUserResponse[] = $this->wrapIt($id, $bests, 'TB(1st Set)(Yes)', 'TB(1st Set)(No)', 'TB(1st Set)');
         }
         //=======================================================================================
 
