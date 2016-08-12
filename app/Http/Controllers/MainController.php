@@ -132,7 +132,7 @@ class MainController extends Controller
     }
     public function testProfit()
     {
-        $id = 4;
+        $id = 290;
         $match = Match::find($id);
         $matchId = $match->link_id;
         $matchTypeId = $match->league->sport_type_id;
@@ -533,7 +533,7 @@ class MainController extends Controller
 
     public function testMatch()
     {
-        $id = 270;
+        $id = 4;
         $leagueLink = League::find($id)->link;
         $url = 'http://www.bmbets.com'.$leagueLink;
         $ch = curl_init();

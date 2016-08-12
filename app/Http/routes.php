@@ -11,13 +11,16 @@
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+
 Route::get('/testMatch', 'MainController@testMatch');
 Route::get('/testProfit', 'MainController@testProfit');
 Route::get('/testLeague', 'MainController@testLeague');
 Route::get('/client', 'MainController@client');
 Route::auth();
 
-Route::get('/home', 'HomeController@index');
+Route::get('/home', function () {
+    return redirect('/admin');
+});
+Route::get('/', function () {
+    return redirect('/admin');
+});

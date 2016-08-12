@@ -19,7 +19,7 @@ class League extends Model
 
     public function sportType()
     {
-        return $this->belongsTo('App\League', 'sport_type_id');
+        return $this->belongsTo('App\SportType', 'sport_type_id');
     }
 
     public function matches()
