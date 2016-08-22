@@ -499,32 +499,32 @@ class MainController extends Controller
             curl_close($ch);
 
             if (($httpcode === 200) || ($httpcode === 408)) {
-
                 $dom = HtmlDomParser::str_get_html($output);
-
-                $elements = $dom->find('.country-table .m-count');
-                $links = array();
-                foreach ($elements as $key => $elem) {
-                    $count = preg_replace("/[^0-9]/", '', $elem->plaintext);
-                    $link = $elem->parent()->find('a', 0);
-                    $links[] = $link->href;
-                    if ($league = League::where('link', $link->href)->first()) {
-                        $league->count = $count;
-                        $league->save();
-                        continue;
+                if (is_object($dom)) {
+                    $elements = $dom->find('.country-table .m-count');
+                    $links = array();
+                    foreach ($elements as $key => $elem) {
+                        $count = preg_replace("/[^0-9]/", '', $elem->plaintext);
+                        $link = $elem->parent()->find('a', 0);
+                        $links[] = $link->href;
+                        if ($league = League::where('link', $link->href)->first()) {
+                            $league->count = $count;
+                            $league->save();
+                            continue;
+                        }
+                        $leagueData = array(
+                            'title' => $link->plaintext,
+                            'link' => $link->href,
+                            'count' => $count,
+                            'sport_type_id' => $type->id,
+                        );
+                        League::create($leagueData);
                     }
-                    $leagueData = array(
-                        'title' => $link->plaintext,
-                        'link' => $link->href,
-                        'count' => $count,
-                        'sport_type_id' => $type->id,
-                    );
-                    League::create($leagueData);
+                    \DB::table('Leagues')
+                        ->where('sport_type_id', $type->id)
+                        ->whereNotIn('link', $links)
+                        ->delete();
                 }
-                \DB::table('Leagues')
-                    ->where('sport_type_id', $type->id)
-                    ->whereNotIn('link', $links)
-                    ->delete();
             } else {
                 dd($output);
             }
@@ -547,31 +547,30 @@ class MainController extends Controller
         curl_close($ch);
 
         if (($httpcode === 200) || ($httpcode === 408)) {
-
             $dom = HtmlDomParser::str_get_html($output);
-
-            $elements = $dom->find('.odds-table tr a');
-            $links = array();
-            foreach ($elements as $key => $elem) {
-                preg_match('/^.*(?<link_id>\d+)\/?$/isU', $elem->href, $matches);
-                $link_id = $matches['link_id'];
-                $links[] = $elem->href;
-                if ($match = Match::where('link', $elem->href)->first()) {
-                    continue;
+            if (is_object($dom)) {
+                $elements = $dom->find('.odds-table tr a');
+                $links = array();
+                foreach ($elements as $key => $elem) {
+                    preg_match('/^.*(?<link_id>\d+)\/?$/isU', $elem->href, $matches);
+                    $link_id = $matches['link_id'];
+                    $links[] = $elem->href;
+                    if ($match = Match::where('link', $elem->href)->first()) {
+                        continue;
+                    }
+                    $matchData = array(
+                        'league_id' => $id,
+                        'title' => $elem->plaintext,
+                        'link' => $elem->href,
+                        'link_id' => $link_id,
+                    );
+                    Match::create($matchData);
                 }
-                $matchData = array(
-                    'league_id' => $id,
-                    'title' => $elem->plaintext,
-                    'link' => $elem->href,
-                    'link_id' => $link_id,
-                );
-                Match::create($matchData);
+                \DB::table('Matches')
+                    ->where('league_id', $id)
+                    ->whereNotIn('link', $links)
+                    ->delete();
             }
-            \DB::table('Matches')
-                ->where('league_id', $id)
-                ->whereNotIn('link', $links)
-                ->delete();
-
         } else {
             dd($output);
         }
