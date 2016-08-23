@@ -57,6 +57,7 @@ class MainController extends Controller
     private function singleSearch(&$finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType = null) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
+        curl_setopt($ch, CURLOPT_PROXY, '118.98.46.172:80');
         curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -96,6 +97,7 @@ class MainController extends Controller
     private function multiSearch(&$finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, &$subTypes) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
+        curl_setopt($ch, CURLOPT_PROXY, '118.98.46.172:80');
         curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
