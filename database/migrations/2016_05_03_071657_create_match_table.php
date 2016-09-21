@@ -17,6 +17,7 @@ class CreateMatchTable extends Migration
             $table->integer('league_id')->unsigned()->default(0);
             $table->string('title', 300)->default('');
             $table->string('link', 300)->default('');
+            $table->string('full_link', 300)->default('');
             $table->string('link_id', 30)->default('');
             $table->timestamps();
 

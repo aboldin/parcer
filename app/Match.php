@@ -8,7 +8,7 @@ class Match extends Model
 {
 
     protected $fillable = [
-        'title', 'link', 'league_id', 'link_id'
+        'title', 'link', 'full_link', 'league_id', 'link_id'
     ];
     /**
      * The database table used by the model.

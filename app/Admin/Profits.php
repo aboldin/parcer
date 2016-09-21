@@ -19,7 +19,7 @@ AdminSection::registerModel(Profit::class, function (ModelConfiguration $model) 
             AdminColumn::link('type')->setLabel('Bet type'),
             AdminColumn::link('profit')->setLabel('Profit (%)'),
             AdminColumn::link('text')->setLabel('Info'),
-            AdminColumn::relatedLink('match.link')->setLabel('Link to BMBets'),
+            AdminColumn::relatedLink('match.full_link')->setLabel('Link to BMBets'),
         ]);
         return $display;
     });

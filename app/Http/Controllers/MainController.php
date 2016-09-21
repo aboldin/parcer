@@ -57,7 +57,6 @@ class MainController extends Controller
     private function singleSearch(&$finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType = null) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
-        curl_setopt($ch, CURLOPT_PROXY, '118.98.46.172:80');
         curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -97,7 +96,6 @@ class MainController extends Controller
     private function multiSearch(&$finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, &$subTypes) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
-        curl_setopt($ch, CURLOPT_PROXY, '118.98.46.172:80');
         curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -134,7 +132,7 @@ class MainController extends Controller
     }
     public function testProfit()
     {
-        $id = 290;
+        $id = 50;
         $match = Match::find($id);
         $matchId = $match->link_id;
         $matchTypeId = $match->league->sport_type_id;
@@ -492,6 +490,7 @@ class MainController extends Controller
             $url = 'http://www.bmbets.com/'.$type->url.'/';
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_INTERFACE, "188.225.76.228");
             curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
             curl_setopt($ch, CURLOPT_HEADER, 0);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -535,7 +534,7 @@ class MainController extends Controller
 
     public function testMatch()
     {
-        $id = 4;
+        $id = 434;
         $leagueLink = League::find($id)->link;
         $url = 'http://www.bmbets.com'.$leagueLink;
         $ch = curl_init();
@@ -564,6 +563,7 @@ class MainController extends Controller
                         'league_id' => $id,
                         'title' => $elem->plaintext,
                         'link' => $elem->href,
+                        'full_link' => 'http://www.bmbets.com'.$elem->href,
                         'link_id' => $link_id,
                     );
                     Match::create($matchData);
