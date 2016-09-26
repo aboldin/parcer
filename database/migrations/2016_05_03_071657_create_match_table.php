@@ -19,6 +19,7 @@ class CreateMatchTable extends Migration
             $table->string('link', 300)->default('');
             $table->string('full_link', 300)->default('');
             $table->string('link_id', 30)->default('');
+            $table->datetime('match_date')->nullable();
             $table->timestamps();
 
         });

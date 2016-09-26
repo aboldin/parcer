@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use Faker\Provider\cs_CZ\DateTime;
 use Illuminate\Http\Request;
 use Sunra\PhpSimple\HtmlDomParser;
 use App\League;
 use App\Match;
 use App\Profit;
+use App\History;
 use App\SportType;
+use Illuminate\Support\Facades\DB;
 
 class MainController extends Controller
 {
@@ -57,6 +60,12 @@ class MainController extends Controller
     private function singleSearch(&$finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType = null) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
+
+        $switcher = DB::table('ParcerSwitcher')->first();
+        if ($switcher && ($switcher->ip)) {
+            curl_setopt($ch, CURLOPT_INTERFACE, $switcher->ip);
+        }
+
         curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -96,6 +105,12 @@ class MainController extends Controller
     private function multiSearch(&$finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, &$subTypes) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
+
+        $switcher = DB::table('ParcerSwitcher')->first();
+        if ($switcher && ($switcher->ip)) {
+            curl_setopt($ch, CURLOPT_INTERFACE, $switcher->ip);
+        }
+
         curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -132,7 +147,7 @@ class MainController extends Controller
     }
     public function testProfit()
     {
-        $id = 50;
+        $id = 1;
         $match = Match::find($id);
         $matchId = $match->link_id;
         $matchTypeId = $match->league->sport_type_id;
@@ -475,6 +490,18 @@ class MainController extends Controller
                         Profit::create($profitData);
                     }
                 }
+                if ($profitData['profit'] >= 90) {
+                    History::create(array(
+                        'sport_type' => $match->league->sportType->name,
+                        'league' => $match->league->title,
+                        'match' => $match->title,
+                        'type' => $profitData['type'],
+                        'profit' => $profitData['profit'],
+                        'text' => $profitData['text'],
+                        'full_link' => $match->full_link,
+                        'match_date' => $match->match_date,
+                    ));
+                }
             }
         }
         \DB::table('Profits')
@@ -490,7 +517,12 @@ class MainController extends Controller
             $url = 'http://www.bmbets.com/'.$type->url.'/';
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_INTERFACE, "188.225.76.228");
+
+            $switcher = DB::table('ParcerSwitcher')->first();
+            if ($switcher && ($switcher->ip)) {
+                curl_setopt($ch, CURLOPT_INTERFACE, $switcher->ip);
+            }
+
             curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
             curl_setopt($ch, CURLOPT_HEADER, 0);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -534,11 +566,17 @@ class MainController extends Controller
 
     public function testMatch()
     {
-        $id = 434;
+        $id = 26;
         $leagueLink = League::find($id)->link;
         $url = 'http://www.bmbets.com'.$leagueLink;
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
+
+        $switcher = DB::table('ParcerSwitcher')->first();
+        if ($switcher && ($switcher->ip)) {
+            curl_setopt($ch, CURLOPT_INTERFACE, $switcher->ip);
+        }
+
         curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -550,23 +588,34 @@ class MainController extends Controller
         if (($httpcode === 200) || ($httpcode === 408)) {
             $dom = HtmlDomParser::str_get_html($output);
             if (is_object($dom)) {
-                $elements = $dom->find('.odds-table tr a');
+                $elements = $dom->find('.odds-table tr');
                 $links = array();
-                foreach ($elements as $key => $elem) {
-                    preg_match('/^.*(?<link_id>\d+)\/?$/isU', $elem->href, $matches);
-                    $link_id = $matches['link_id'];
-                    $links[] = $elem->href;
-                    if ($match = Match::where('link', $elem->href)->first()) {
-                        continue;
+                $currDate = '';
+                foreach ($elements as $key => $row) {
+                    if ($row->children[0]->tag == "th") {
+                        $currDate = $row->children[0]->plaintext;
+                    } else {
+                        $elem = $row->find('a');
+                        if ($elem && (isset($elem[0]))) {
+                            $elem = $elem[0];
+                            preg_match('/^.*(?<link_id>\d+)\/?$/isU', $elem->href, $matches);
+                            $link_id = $matches['link_id'];
+                            $links[] = $elem->href;
+                            if ($match = Match::where('link', $elem->href)->first()) {
+                                continue;
+                            }
+                            $matchDate = \DateTime::createFromFormat('l, F j, Y H:i', $currDate.' '.$row->children[0]->plaintext);
+                            $matchData = array(
+                                'league_id' => $id,
+                                'title' => $elem->plaintext,
+                                'link' => $elem->href,
+                                'full_link' => 'http://www.bmbets.com'.$elem->href,
+                                'link_id' => $link_id,
+                                'match_date' => $matchDate
+                            );
+                            Match::create($matchData);
+                        }
                     }
-                    $matchData = array(
-                        'league_id' => $id,
-                        'title' => $elem->plaintext,
-                        'link' => $elem->href,
-                        'full_link' => 'http://www.bmbets.com'.$elem->href,
-                        'link_id' => $link_id,
-                    );
-                    Match::create($matchData);
                 }
                 \DB::table('Matches')
                     ->where('league_id', $id)
