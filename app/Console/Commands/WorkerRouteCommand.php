@@ -72,7 +72,7 @@ class WorkerRouteCommand extends Command
     private function singleSearch(&$finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType = null) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
-        curl_setopt($ch, CURLOPT_INTERFACE, "188.225.76.228");
+        curl_setopt($ch, CURLOPT_INTERFACE, "188.225.77.40");
         curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -112,7 +112,7 @@ class WorkerRouteCommand extends Command
     private function multiSearch(&$finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, &$subTypes) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
-        curl_setopt($ch, CURLOPT_INTERFACE, "188.225.76.228");
+        curl_setopt($ch, CURLOPT_INTERFACE, "188.225.77.40");
         curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -515,7 +515,7 @@ class WorkerRouteCommand extends Command
                 $url = 'http://www.bmbets.com/' . $type->url . '/';
                 $ch = curl_init();
                 curl_setopt($ch, CURLOPT_URL, $url);
-                curl_setopt($ch, CURLOPT_INTERFACE, "188.225.76.228");
+                curl_setopt($ch, CURLOPT_INTERFACE, "188.225.77.40");
                 curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
                 curl_setopt($ch, CURLOPT_HEADER, 0);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -563,7 +563,7 @@ class WorkerRouteCommand extends Command
             $url = 'http://www.bmbets.com'.$leagueLink;
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_INTERFACE, "188.225.76.228");
+            curl_setopt($ch, CURLOPT_INTERFACE, "188.225.77.40");
             curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
             curl_setopt($ch, CURLOPT_HEADER, 0);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
