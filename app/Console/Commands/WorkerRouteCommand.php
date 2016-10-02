@@ -10,6 +10,7 @@ use App\Profit;
 use App\SportType;
 use Illuminate\Support\Facades\DB;
 use App\History;
+use App\Proxy;
 
 class WorkerRouteCommand extends Command
 {
@@ -73,13 +74,11 @@ class WorkerRouteCommand extends Command
 
     private function singleSearch(&$finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType = null) {
         $ch = curl_init();
+        $randomProxy = DB::table('Proxy')->where('status', Proxy::status_works)
+            ->inRandomOrder()
+            ->first();
         curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
-
-        $switcher = DB::table('ParcerSwitcher')->first();
-        if ($switcher && ($switcher->ip)) {
-            curl_setopt($ch, CURLOPT_INTERFACE, $switcher->ip);
-        }
-
+        curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
         curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -113,17 +112,20 @@ class WorkerRouteCommand extends Command
                     }
                 }
             }
+        } else {
+            $proxy = Proxy::find($randomProxy->id);
+            $proxy->status = Proxy::status_banned;
+            $proxy->save();
         }
     }
 
     private function multiSearch(&$finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, &$subTypes) {
         $ch = curl_init();
+        $randomProxy = DB::table('Proxy')->where('status', Proxy::status_works)
+            ->inRandomOrder()
+            ->first();
         curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
-
-        $switcher = DB::table('ParcerSwitcher')->first();
-        if ($switcher && ($switcher->ip)) {
-            curl_setopt($ch, CURLOPT_INTERFACE, $switcher->ip);
-        }
+        curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
         curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -156,6 +158,10 @@ class WorkerRouteCommand extends Command
                 }
             }
             $subTypes = array_unique($subTypes);
+        } else {
+            $proxy = Proxy::find($randomProxy->id);
+            $proxy->status = Proxy::status_banned;
+            $proxy->save();
         }
     }
 
@@ -535,15 +541,13 @@ class WorkerRouteCommand extends Command
         $worker->addFunction('cli_leagues', function(\GearmanJob $job){
             echo 'Started job "Leagues"'.PHP_EOL;
             foreach (SportType::all() as $type) {
-                $url = 'http://www.bmbets.com/' . $type->url . '/';
+                $url = 'http://www.bmbets.com/'.$type->url.'/';
                 $ch = curl_init();
+                $randomProxy = DB::table('Proxy')->where('status', Proxy::status_works)
+                    ->inRandomOrder()
+                    ->first();
                 curl_setopt($ch, CURLOPT_URL, $url);
-
-                $switcher = DB::table('ParcerSwitcher')->first();
-                if ($switcher && ($switcher->ip)) {
-                    curl_setopt($ch, CURLOPT_INTERFACE, $switcher->ip);
-                }
-
+                curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
                 curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
                 curl_setopt($ch, CURLOPT_HEADER, 0);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -579,6 +583,10 @@ class WorkerRouteCommand extends Command
                             ->whereNotIn('link', $links)
                             ->delete();
                     }
+                } else {
+                    $proxy = Proxy::find($randomProxy->id);
+                    $proxy->status = Proxy::status_banned;
+                    $proxy->save();
                 }
             }
             echo 'Finished job "Leagues"'.PHP_EOL.PHP_EOL;
@@ -590,13 +598,11 @@ class WorkerRouteCommand extends Command
             $leagueLink = League::find($id)->link;
             $url = 'http://www.bmbets.com'.$leagueLink;
             $ch = curl_init();
+            $randomProxy = DB::table('Proxy')->where('status', Proxy::status_works)
+                ->inRandomOrder()
+                ->first();
             curl_setopt($ch, CURLOPT_URL, $url);
-
-            $switcher = DB::table('ParcerSwitcher')->first();
-            if ($switcher && ($switcher->ip)) {
-                curl_setopt($ch, CURLOPT_INTERFACE, $switcher->ip);
-            }
-
+            curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
             curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
             curl_setopt($ch, CURLOPT_HEADER, 0);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -642,6 +648,10 @@ class WorkerRouteCommand extends Command
                         ->whereNotIn('link', $links)
                         ->delete();
                 }
+            } else {
+                $proxy = Proxy::find($randomProxy->id);
+                $proxy->status = Proxy::status_banned;
+                $proxy->save();
             }
             echo 'Finished job "League #'.$id.'"'.PHP_EOL.PHP_EOL;
         });

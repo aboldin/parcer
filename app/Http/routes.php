@@ -16,6 +16,9 @@ Route::get('/testMatch', 'MainController@testMatch');
 Route::get('/testProfit', 'MainController@testProfit');
 Route::get('/testLeague', 'MainController@testLeague');
 Route::get('/client', 'MainController@client');
+Route::get('/token', 'MainController@token');
+
+Route::post('/import', 'MainController@importProxy');
 Route::auth();
 
 Route::get('/home', function () {

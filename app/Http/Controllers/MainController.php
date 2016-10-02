@@ -10,6 +10,7 @@ use App\Match;
 use App\Profit;
 use App\History;
 use App\SportType;
+use App\Proxy;
 use Illuminate\Support\Facades\DB;
 
 class MainController extends Controller
@@ -59,13 +60,11 @@ class MainController extends Controller
 
     private function singleSearch(&$finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType = null) {
         $ch = curl_init();
+        $randomProxy = DB::table('Proxy')->where('status', Proxy::status_works)
+            ->inRandomOrder()
+            ->first();
         curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
-
-        $switcher = DB::table('ParcerSwitcher')->first();
-        if ($switcher && ($switcher->ip)) {
-            curl_setopt($ch, CURLOPT_INTERFACE, $switcher->ip);
-        }
-
+        curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
         curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -99,18 +98,20 @@ class MainController extends Controller
                     }
                 }
             }
+        } else {
+            $proxy = Proxy::find($randomProxy->id);
+            $proxy->status = Proxy::status_banned;
+            $proxy->save();
         }
     }
 
     private function multiSearch(&$finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, &$subTypes) {
         $ch = curl_init();
+        $randomProxy = DB::table('Proxy')->where('status', Proxy::status_works)
+            ->inRandomOrder()
+            ->first();
         curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
-
-        $switcher = DB::table('ParcerSwitcher')->first();
-        if ($switcher && ($switcher->ip)) {
-            curl_setopt($ch, CURLOPT_INTERFACE, $switcher->ip);
-        }
-
+        curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
         curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -143,6 +144,10 @@ class MainController extends Controller
                 }
             }
             $subTypes = array_unique($subTypes);
+        } else {
+            $proxy = Proxy::find($randomProxy->id);
+            $proxy->status = Proxy::status_banned;
+            $proxy->save();
         }
     }
     public function testProfit()
@@ -516,13 +521,11 @@ class MainController extends Controller
         foreach (SportType::all() as $type) {
             $url = 'http://www.bmbets.com/'.$type->url.'/';
             $ch = curl_init();
+            $randomProxy = DB::table('Proxy')->where('status', Proxy::status_works)
+                ->inRandomOrder()
+                ->first();
             curl_setopt($ch, CURLOPT_URL, $url);
-
-            $switcher = DB::table('ParcerSwitcher')->first();
-            if ($switcher && ($switcher->ip)) {
-                curl_setopt($ch, CURLOPT_INTERFACE, $switcher->ip);
-            }
-
+            curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
             curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
             curl_setopt($ch, CURLOPT_HEADER, 0);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -559,7 +562,9 @@ class MainController extends Controller
                         ->delete();
                 }
             } else {
-                dd($output);
+                $proxy = Proxy::find($randomProxy->id);
+                $proxy->status = Proxy::status_banned;
+                $proxy->save();
             }
         }
     }
@@ -570,13 +575,11 @@ class MainController extends Controller
         $leagueLink = League::find($id)->link;
         $url = 'http://www.bmbets.com'.$leagueLink;
         $ch = curl_init();
+        $randomProxy = DB::table('Proxy')->where('status', Proxy::status_works)
+            ->inRandomOrder()
+            ->first();
         curl_setopt($ch, CURLOPT_URL, $url);
-
-        $switcher = DB::table('ParcerSwitcher')->first();
-        if ($switcher && ($switcher->ip)) {
-            curl_setopt($ch, CURLOPT_INTERFACE, $switcher->ip);
-        }
-
+        curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
         curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -623,7 +626,9 @@ class MainController extends Controller
                     ->delete();
             }
         } else {
-            dd($output);
+            $proxy = Proxy::find($randomProxy->id);
+            $proxy->status = Proxy::status_banned;
+            $proxy->save();
         }
 
     }
@@ -659,5 +664,56 @@ class MainController extends Controller
         $totaltime = number_format(microtime(true) - $start, 2);
         dump("Got profits in: $totaltime seconds");
 
+    }
+
+    public function token()
+    {
+        dump(csrf_token());
+    }
+
+    public function importProxy(Request $request)
+    {
+        $file = $request->file('proxy');
+        if ($file) {
+            if (($handle = fopen($file, "r")) !== FALSE) {
+                while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                    if (isset($data[0]) && $data[0]) {
+                        $proxy = Proxy::where('proxy', $data[0])->first();
+                        if (!$proxy) {
+                            $proxyData = array(
+                                'proxy' => $data[0],
+                                'status' => Proxy::status_unchecked
+                            );
+                            Proxy::create($proxyData);
+                        }
+                    }
+                }
+                fclose($handle);
+            }
+        }
+
+        $proxies = Proxy::all();
+        foreach ($proxies as $proxy) {
+            if ($proxy->status == 0) {
+                $url = 'http://www.bmbets.com/football/';
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $url);
+                curl_setopt($ch, CURLOPT_PROXY, $proxy->proxy);
+                curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
+                curl_setopt($ch, CURLOPT_HEADER, 0);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+                $output = curl_exec($ch);
+                $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                if ($httpcode == 200) {
+                    $proxy->status = Proxy::status_works;
+                    $proxy->save();
+                } else {
+                    $proxy->status = Proxy::status_failed;
+                    $proxy->save();
+                }
+            }
+        }
     }
 }
