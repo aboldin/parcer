@@ -106,7 +106,7 @@ class MainController extends Controller
                 $done = 1;
             } else {
                 $proxy = Proxy::find($randomProxy->id);
-                if ($proxy->tries >= 5) {
+                if ($proxy->tries >= 10) {
                     $proxy->status = Proxy::status_failed;
                 } else {
                     $proxy->tries = ($proxy->tries + 1);
@@ -166,7 +166,7 @@ class MainController extends Controller
                 $done = 1;
             } else {
                 $proxy = Proxy::find($randomProxy->id);
-                if ($proxy->tries >= 5) {
+                if ($proxy->tries >= 10) {
                     $proxy->status = Proxy::status_failed;
                 } else {
                     $proxy->tries = ($proxy->tries + 1);
@@ -597,7 +597,7 @@ class MainController extends Controller
                     $done = 1;
                 } else {
                     $proxy = Proxy::find($randomProxy->id);
-                    if ($proxy->tries >= 5) {
+                    if ($proxy->tries >= 10) {
                         $proxy->status = Proxy::status_failed;
                     } else {
                         $proxy->tries = ($proxy->tries + 1);
@@ -675,7 +675,7 @@ class MainController extends Controller
                 $done = 1;
             } else {
                 $proxy = Proxy::find($randomProxy->id);
-                if ($proxy->tries >= 5) {
+                if ($proxy->tries >= 10) {
                     $proxy->status = Proxy::status_failed;
                 } else {
                     $proxy->tries = ($proxy->tries + 1);
