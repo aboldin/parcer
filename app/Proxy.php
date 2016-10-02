@@ -13,7 +13,7 @@ class Proxy extends Model
     const status_banned = 3;
 
     protected $fillable = [
-        'status', 'proxy'
+        'status', 'proxy', 'tries'
     ];
     /**
      * The database table used by the model.

@@ -16,6 +16,7 @@ class CreateProxyTable extends Migration
             $table->increments('id');
             $table->string('proxy', 200)->default('');
             $table->integer('status')->unsigned()->default(0);
+            $table->integer('tries')->unsigned()->default(0);
             $table->timestamps();
         });
 

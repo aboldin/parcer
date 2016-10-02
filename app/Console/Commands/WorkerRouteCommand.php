@@ -73,95 +73,123 @@ class WorkerRouteCommand extends Command
     }
 
     private function singleSearch(&$finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType = null) {
-        $ch = curl_init();
-        $randomProxy = DB::table('Proxy')->where('status', Proxy::status_works)
-            ->inRandomOrder()
-            ->first();
-        curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
-        curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
-        curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, array(
-            'eId' => $matchId,
-            'bId' => $eventArg
-        ));
-        $output = curl_exec($ch);
-        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        $done = 0;
+        while (!$done) {
+            $ch = curl_init();
+            $randomProxy = DB::table('Proxy')->where('status', Proxy::status_works)
+                ->inRandomOrder()
+                ->first();
+            curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
+            curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
+            curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
+            curl_setopt($ch, CURLOPT_HEADER, 0);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, array(
+                'eId' => $matchId,
+                'bId' => $eventArg
+            ));
+            $output = curl_exec($ch);
+            $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
-        if (($httpcode === 200) || ($httpcode === 408)) {
-            $odds = json_decode($output);
-            if (($odds) && (property_exists($odds, 'odds'))) {
-                if ($odds->odds[0]->t === $eventArg) {
-                    foreach($odds->odds[0]->r as $odd){
-                        if (in_array($odd->i,$avaliable_bks_keys)) {
-                            foreach ($odd->c as $oddc){
-                                if ($oddc->b == 0) {
-                                    if ($stringType) {
-                                        $finalArray[$stringType.'('.$oddc->k.')'][$flipped[$odd->i]] = $oddc->v;
-                                    } else {
-                                        $finalArray[$oddc->k][$flipped[$odd->i]] = $oddc->v;
+            if (($httpcode === 200) || ($httpcode === 408)) {
+                $odds = json_decode($output);
+                if (($odds) && (property_exists($odds, 'odds'))) {
+                    if ($odds->odds[0]->t === $eventArg) {
+                        foreach($odds->odds[0]->r as $odd){
+                            if (in_array($odd->i,$avaliable_bks_keys)) {
+                                foreach ($odd->c as $oddc){
+                                    if ($oddc->b == 0) {
+                                        if ($stringType) {
+                                            $finalArray[$stringType.'('.$oddc->k.')'][$flipped[$odd->i]] = $oddc->v;
+                                        } else {
+                                            $finalArray[$oddc->k][$flipped[$odd->i]] = $oddc->v;
+                                        }
                                     }
-                                }
 
+                                }
                             }
                         }
                     }
                 }
+                $proxy = Proxy::find($randomProxy->id);
+                $proxy->tries = 0;
+                $proxy->save();
+                $done = 1;
+            } else {
+                $proxy = Proxy::find($randomProxy->id);
+                if ($proxy->tries >= 5) {
+                    $proxy->status = Proxy::status_failed;
+                } else {
+                    $proxy->tries = ($proxy->tries + 1);
+                }
+                if ($httpcode == 403) {
+                    $proxy->status = Proxy::status_banned;
+                }
+                $proxy->save();
             }
-        } else {
-            $proxy = Proxy::find($randomProxy->id);
-            $proxy->status = Proxy::status_banned;
-            $proxy->save();
         }
     }
 
     private function multiSearch(&$finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType, &$subTypes) {
-        $ch = curl_init();
-        $randomProxy = DB::table('Proxy')->where('status', Proxy::status_works)
-            ->inRandomOrder()
-            ->first();
-        curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
-        curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
-        curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, array(
-            'eId' => $matchId,
-            'bId' => $eventArg
-        ));
-        $output = curl_exec($ch);
-        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        if (($httpcode === 200) || ($httpcode === 408)) {
-            $odds = json_decode($output);
-            if (($odds) && (property_exists($odds, 'odds'))) {
-                foreach ($odds->odds as $partOdd) {
-                    if ($partOdd->t === $eventArg) {
-                        foreach($partOdd->r as $odd){
-                            if (in_array($odd->i,$avaliable_bks_keys)) {
-                                foreach ($odd->c as $oddc){
-                                    if ($oddc->b == 0) {
-                                        $finalArray[$stringType.$partOdd->h.'('.$oddc->k.')'][$flipped[$odd->i]] = $oddc->v;
-                                        $subTypes[] = $stringType.$partOdd->h;
+        $done = 0;
+        while (!$done) {
+            $ch = curl_init();
+            $randomProxy = DB::table('Proxy')->where('status', Proxy::status_works)
+                ->inRandomOrder()
+                ->first();
+            curl_setopt($ch, CURLOPT_URL, 'http://dev.bmbets.com/oddsdata');
+            curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
+            curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
+            curl_setopt($ch, CURLOPT_HEADER, 0);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, array(
+                'eId' => $matchId,
+                'bId' => $eventArg
+            ));
+            $output = curl_exec($ch);
+            $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if (($httpcode === 200) || ($httpcode === 408)) {
+                $odds = json_decode($output);
+                if (($odds) && (property_exists($odds, 'odds'))) {
+                    foreach ($odds->odds as $partOdd) {
+                        if ($partOdd->t === $eventArg) {
+                            foreach($partOdd->r as $odd){
+                                if (in_array($odd->i,$avaliable_bks_keys)) {
+                                    foreach ($odd->c as $oddc){
+                                        if ($oddc->b == 0) {
+                                            $finalArray[$stringType.$partOdd->h.'('.$oddc->k.')'][$flipped[$odd->i]] = $oddc->v;
+                                            $subTypes[] = $stringType.$partOdd->h;
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
 
+                    }
                 }
+                $subTypes = array_unique($subTypes);
+                $proxy = Proxy::find($randomProxy->id);
+                $proxy->tries = 0;
+                $proxy->save();
+                $done = 1;
+            } else {
+                $proxy = Proxy::find($randomProxy->id);
+                if ($proxy->tries >= 5) {
+                    $proxy->status = Proxy::status_failed;
+                } else {
+                    $proxy->tries = ($proxy->tries + 1);
+                }
+                if ($httpcode == 403) {
+                    $proxy->status = Proxy::status_banned;
+                }
+                $proxy->save();
             }
-            $subTypes = array_unique($subTypes);
-        } else {
-            $proxy = Proxy::find($randomProxy->id);
-            $proxy->status = Proxy::status_banned;
-            $proxy->save();
         }
     }
 
@@ -541,7 +569,78 @@ class WorkerRouteCommand extends Command
         $worker->addFunction('cli_leagues', function(\GearmanJob $job){
             echo 'Started job "Leagues"'.PHP_EOL;
             foreach (SportType::all() as $type) {
-                $url = 'http://www.bmbets.com/'.$type->url.'/';
+                $done = 0;
+                while (!$done) {
+                    $url = 'http://www.bmbets.com/'.$type->url.'/';
+                    $ch = curl_init();
+                    $randomProxy = DB::table('Proxy')->where('status', Proxy::status_works)
+                        ->inRandomOrder()
+                        ->first();
+                    curl_setopt($ch, CURLOPT_URL, $url);
+                    curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
+                    curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
+                    curl_setopt($ch, CURLOPT_HEADER, 0);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+                    $output = curl_exec($ch);
+                    $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+
+                    if (($httpcode === 200) || ($httpcode === 408)) {
+                        $dom = HtmlDomParser::str_get_html($output);
+                        if (is_object($dom)) {
+                            $elements = $dom->find('.country-table .m-count');
+                            $links = array();
+                            foreach ($elements as $key => $elem) {
+                                $count = preg_replace("/[^0-9]/", '', $elem->plaintext);
+                                $link = $elem->parent()->find('a', 0);
+                                $links[] = $link->href;
+                                if ($league = League::where('link', $link->href)->first()) {
+                                    $league->count = $count;
+                                    $league->save();
+                                    continue;
+                                }
+                                $leagueData = array(
+                                    'title' => $link->plaintext,
+                                    'link' => $link->href,
+                                    'count' => $count,
+                                    'sport_type_id' => $type->id,
+                                );
+                                League::create($leagueData);
+                            }
+                            \DB::table('Leagues')
+                                ->where('sport_type_id', $type->id)
+                                ->whereNotIn('link', $links)
+                                ->delete();
+                        }
+                        $proxy = Proxy::find($randomProxy->id);
+                        $proxy->tries = 0;
+                        $proxy->save();
+                        $done = 1;
+                    } else {
+                        $proxy = Proxy::find($randomProxy->id);
+                        if ($proxy->tries >= 5) {
+                            $proxy->status = Proxy::status_failed;
+                        } else {
+                            $proxy->tries = ($proxy->tries + 1);
+                        }
+                        if ($httpcode == 403) {
+                            $proxy->status = Proxy::status_banned;
+                        }
+                        $proxy->save();
+                    }
+                }
+            }
+            echo 'Finished job "Leagues"'.PHP_EOL.PHP_EOL;
+        });
+
+        $worker->addFunction('cli_matches', function(\GearmanJob $job){
+            $id = $job->workload();
+            echo 'Started job "League #'.$id.'"'.PHP_EOL;
+            $done = 0;
+            while (!$done) {
+                $leagueLink = League::find($id)->link;
+                $url = 'http://www.bmbets.com'.$leagueLink;
                 $ch = curl_init();
                 $randomProxy = DB::table('Proxy')->where('status', Proxy::status_works)
                     ->inRandomOrder()
@@ -559,99 +658,56 @@ class WorkerRouteCommand extends Command
                 if (($httpcode === 200) || ($httpcode === 408)) {
                     $dom = HtmlDomParser::str_get_html($output);
                     if (is_object($dom)) {
-                        $elements = $dom->find('.country-table .m-count');
+                        $elements = $dom->find('.odds-table tr');
                         $links = array();
-                        foreach ($elements as $key => $elem) {
-                            $count = preg_replace("/[^0-9]/", '', $elem->plaintext);
-                            $link = $elem->parent()->find('a', 0);
-                            $links[] = $link->href;
-                            if ($league = League::where('link', $link->href)->first()) {
-                                $league->count = $count;
-                                $league->save();
-                                continue;
+                        $currDate = '';
+                        foreach ($elements as $key => $row) {
+                            if ($row->children[0]->tag == "th") {
+                                $currDate = $row->children[0]->plaintext;
+                            } else {
+                                $elem = $row->find('a');
+                                if ($elem && (isset($elem[0]))) {
+                                    $elem = $elem[0];
+                                    preg_match('/^.*(?<link_id>\d+)\/?$/isU', $elem->href, $matches);
+                                    $link_id = $matches['link_id'];
+                                    $links[] = $elem->href;
+                                    if ($match = Match::where('link', $elem->href)->first()) {
+                                        continue;
+                                    }
+                                    $matchDate = \DateTime::createFromFormat('l, F j, Y H:i', $currDate.' '.$row->children[0]->plaintext);
+                                    $matchData = array(
+                                        'league_id' => $id,
+                                        'title' => $elem->plaintext,
+                                        'link' => $elem->href,
+                                        'full_link' => 'http://www.bmbets.com'.$elem->href,
+                                        'link_id' => $link_id,
+                                        'match_date' => $matchDate
+                                    );
+                                    Match::create($matchData);
+                                }
                             }
-                            $leagueData = array(
-                                'title' => $link->plaintext,
-                                'link' => $link->href,
-                                'count' => $count,
-                                'sport_type_id' => $type->id,
-                            );
-                            League::create($leagueData);
                         }
-                        \DB::table('Leagues')
-                            ->where('sport_type_id', $type->id)
+                        \DB::table('Matches')
+                            ->where('league_id', $id)
                             ->whereNotIn('link', $links)
                             ->delete();
                     }
+                    $proxy = Proxy::find($randomProxy->id);
+                    $proxy->tries = 0;
+                    $proxy->save();
+                    $done = 1;
                 } else {
                     $proxy = Proxy::find($randomProxy->id);
-                    $proxy->status = Proxy::status_banned;
+                    if ($proxy->tries >= 5) {
+                        $proxy->status = Proxy::status_failed;
+                    } else {
+                        $proxy->tries = ($proxy->tries + 1);
+                    }
+                    if ($httpcode == 403) {
+                        $proxy->status = Proxy::status_banned;
+                    }
                     $proxy->save();
                 }
-            }
-            echo 'Finished job "Leagues"'.PHP_EOL.PHP_EOL;
-        });
-
-        $worker->addFunction('cli_matches', function(\GearmanJob $job){
-            $id = $job->workload();
-            echo 'Started job "League #'.$id.'"'.PHP_EOL;
-            $leagueLink = League::find($id)->link;
-            $url = 'http://www.bmbets.com'.$leagueLink;
-            $ch = curl_init();
-            $randomProxy = DB::table('Proxy')->where('status', Proxy::status_works)
-                ->inRandomOrder()
-                ->first();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
-            curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
-            curl_setopt($ch, CURLOPT_HEADER, 0);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-            $output = curl_exec($ch);
-            $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if (($httpcode === 200) || ($httpcode === 408)) {
-                $dom = HtmlDomParser::str_get_html($output);
-                if (is_object($dom)) {
-                    $elements = $dom->find('.odds-table tr');
-                    $links = array();
-                    $currDate = '';
-                    foreach ($elements as $key => $row) {
-                        if ($row->children[0]->tag == "th") {
-                            $currDate = $row->children[0]->plaintext;
-                        } else {
-                            $elem = $row->find('a');
-                            if ($elem && (isset($elem[0]))) {
-                                $elem = $elem[0];
-                                preg_match('/^.*(?<link_id>\d+)\/?$/isU', $elem->href, $matches);
-                                $link_id = $matches['link_id'];
-                                $links[] = $elem->href;
-                                if ($match = Match::where('link', $elem->href)->first()) {
-                                    continue;
-                                }
-                                $matchDate = \DateTime::createFromFormat('l, F j, Y H:i', $currDate.' '.$row->children[0]->plaintext);
-                                $matchData = array(
-                                    'league_id' => $id,
-                                    'title' => $elem->plaintext,
-                                    'link' => $elem->href,
-                                    'full_link' => 'http://www.bmbets.com'.$elem->href,
-                                    'link_id' => $link_id,
-                                    'match_date' => $matchDate
-                                );
-                                Match::create($matchData);
-                            }
-                        }
-                    }
-                    \DB::table('Matches')
-                        ->where('league_id', $id)
-                        ->whereNotIn('link', $links)
-                        ->delete();
-                }
-            } else {
-                $proxy = Proxy::find($randomProxy->id);
-                $proxy->status = Proxy::status_banned;
-                $proxy->save();
             }
             echo 'Finished job "League #'.$id.'"'.PHP_EOL.PHP_EOL;
         });
