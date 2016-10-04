@@ -62,7 +62,7 @@ class MainController extends Controller
     private function log($proxy, $code, $response)
     {
         Log::create(array(
-            'proxy_id' => $proxy,
+            'proxy_id' => $proxy->id,
             'code' => $code,
             'response' => $response,
         ));

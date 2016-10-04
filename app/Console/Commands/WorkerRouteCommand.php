@@ -76,7 +76,7 @@ class WorkerRouteCommand extends Command
     private function log($proxy, $code, $response)
     {
         Log::create(array(
-            'proxy_id' => $proxy,
+            'proxy_id' => $proxy->id,
             'code' => $code,
             'response' => $response,
         ));
