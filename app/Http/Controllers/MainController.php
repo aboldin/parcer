@@ -12,6 +12,7 @@ use App\History;
 use App\SportType;
 use App\Proxy;
 use Illuminate\Support\Facades\DB;
+use App\Log;
 
 class MainController extends Controller
 {
@@ -58,6 +59,15 @@ class MainController extends Controller
         return $j;
     }
 
+    private function log($proxy, $code, $response)
+    {
+        Log::create(array(
+            'proxy_id' => $proxy,
+            'code' => $code,
+            'response' => $response,
+        ));
+    }
+
     private function singleSearch(&$finalArray, $matchId, $eventArg, $avaliable_bks_keys, $flipped, $stringType = null) {
         $done = 0;
         while (!$done) {
@@ -70,7 +80,7 @@ class MainController extends Controller
             curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
             curl_setopt($ch, CURLOPT_HEADER, 0);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, array(
                 'eId' => $matchId,
@@ -80,7 +90,7 @@ class MainController extends Controller
             $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            if (($httpcode === 200) || ($httpcode === 408)) {
+            if ((($httpcode === 200) || ($httpcode === 408)) && $output) {
                 $odds = json_decode($output);
                 if (($odds) && (property_exists($odds, 'odds'))) {
                     if ($odds->odds[0]->t === $eventArg) {
@@ -106,7 +116,8 @@ class MainController extends Controller
                 $done = 1;
             } else {
                 $proxy = Proxy::find($randomProxy->id);
-                if ($proxy->tries >= 4) {
+                $this->log($proxy, $httpcode, $output);
+                if ($proxy->tries >= 8) {
                     $proxy->status = Proxy::status_failed;
                 } else {
                     $proxy->tries = ($proxy->tries + 1);
@@ -131,7 +142,7 @@ class MainController extends Controller
             curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
             curl_setopt($ch, CURLOPT_HEADER, 0);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, array(
                 'eId' => $matchId,
@@ -140,7 +151,7 @@ class MainController extends Controller
             $output = curl_exec($ch);
             $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-            if (($httpcode === 200) || ($httpcode === 408)) {
+            if ((($httpcode === 200) || ($httpcode === 408)) && $output) {
                 $odds = json_decode($output);
                 if (($odds) && (property_exists($odds, 'odds'))) {
                     foreach ($odds->odds as $partOdd) {
@@ -166,7 +177,8 @@ class MainController extends Controller
                 $done = 1;
             } else {
                 $proxy = Proxy::find($randomProxy->id);
-                if ($proxy->tries >= 4) {
+                $this->log($proxy, $httpcode, $output);
+                if ($proxy->tries >= 8) {
                     $proxy->status = Proxy::status_failed;
                 } else {
                     $proxy->tries = ($proxy->tries + 1);
@@ -559,12 +571,11 @@ class MainController extends Controller
                 curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
                 curl_setopt($ch, CURLOPT_HEADER, 0);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 20);
                 $output = curl_exec($ch);
                 $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
-
-                if (($httpcode === 200) || ($httpcode === 408)) {
+                if ((($httpcode === 200) || ($httpcode === 408)) && $output) {
                     $dom = HtmlDomParser::str_get_html($output);
                     if (is_object($dom)) {
                         $elements = $dom->find('.country-table .m-count');
@@ -597,7 +608,8 @@ class MainController extends Controller
                     $done = 1;
                 } else {
                     $proxy = Proxy::find($randomProxy->id);
-                    if ($proxy->tries >= 4) {
+                    $this->log($proxy, $httpcode, $output);
+                    if ($proxy->tries >= 8) {
                         $proxy->status = Proxy::status_failed;
                     } else {
                         $proxy->tries = ($proxy->tries + 1);
@@ -627,12 +639,12 @@ class MainController extends Controller
             curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
             curl_setopt($ch, CURLOPT_HEADER, 0);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
             $output = curl_exec($ch);
             $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            if (($httpcode === 200) || ($httpcode === 408)) {
+            if ((($httpcode === 200) || ($httpcode === 408)) && $output) {
                 $dom = HtmlDomParser::str_get_html($output);
                 if (is_object($dom)) {
                     $elements = $dom->find('.odds-table tr');
@@ -681,7 +693,8 @@ class MainController extends Controller
                 $done = 1;
             } else {
                 $proxy = Proxy::find($randomProxy->id);
-                if ($proxy->tries >= 4) {
+                $this->log($proxy, $httpcode, $output);
+                if ($proxy->tries >= 8) {
                     $proxy->status = Proxy::status_failed;
                 } else {
                     $proxy->tries = ($proxy->tries + 1);
@@ -763,11 +776,11 @@ class MainController extends Controller
                 curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
                 curl_setopt($ch, CURLOPT_HEADER, 0);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 20);
                 $output = curl_exec($ch);
                 $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
-                if ($httpcode == 200) {
+                if ($httpcode == 200 && $output) {
                     $proxy->status = Proxy::status_works;
                     $proxy->save();
                 } elseif ($httpcode == 403) {
