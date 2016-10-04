@@ -70,7 +70,7 @@ class MainController extends Controller
             curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
             curl_setopt($ch, CURLOPT_HEADER, 0);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, array(
                 'eId' => $matchId,
@@ -106,7 +106,7 @@ class MainController extends Controller
                 $done = 1;
             } else {
                 $proxy = Proxy::find($randomProxy->id);
-                if ($proxy->tries >= 10) {
+                if ($proxy->tries >= 4) {
                     $proxy->status = Proxy::status_failed;
                 } else {
                     $proxy->tries = ($proxy->tries + 1);
@@ -131,7 +131,7 @@ class MainController extends Controller
             curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
             curl_setopt($ch, CURLOPT_HEADER, 0);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, array(
                 'eId' => $matchId,
@@ -166,7 +166,7 @@ class MainController extends Controller
                 $done = 1;
             } else {
                 $proxy = Proxy::find($randomProxy->id);
-                if ($proxy->tries >= 10) {
+                if ($proxy->tries >= 4) {
                     $proxy->status = Proxy::status_failed;
                 } else {
                     $proxy->tries = ($proxy->tries + 1);
@@ -555,11 +555,11 @@ class MainController extends Controller
                     ->inRandomOrder()
                     ->first();
                 curl_setopt($ch, CURLOPT_URL, $url);
-                curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
+                //curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
                 curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
                 curl_setopt($ch, CURLOPT_HEADER, 0);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
                 $output = curl_exec($ch);
                 $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
@@ -597,7 +597,7 @@ class MainController extends Controller
                     $done = 1;
                 } else {
                     $proxy = Proxy::find($randomProxy->id);
-                    if ($proxy->tries >= 10) {
+                    if ($proxy->tries >= 4) {
                         $proxy->status = Proxy::status_failed;
                     } else {
                         $proxy->tries = ($proxy->tries + 1);
@@ -627,7 +627,7 @@ class MainController extends Controller
             curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
             curl_setopt($ch, CURLOPT_HEADER, 0);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
             $output = curl_exec($ch);
             $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
@@ -652,6 +652,12 @@ class MainController extends Controller
                                     continue;
                                 }
                                 $matchDate = \DateTime::createFromFormat('l, F j, Y H:i', $currDate.' '.$row->children[0]->plaintext);
+
+                                $timeX = new \DateTime('+3 days');
+                                if ($matchDate > $timeX) {
+                                    //too late match
+                                    continue;
+                                }
                                 $matchData = array(
                                     'league_id' => $id,
                                     'title' => $elem->plaintext,
@@ -675,7 +681,7 @@ class MainController extends Controller
                 $done = 1;
             } else {
                 $proxy = Proxy::find($randomProxy->id);
-                if ($proxy->tries >= 10) {
+                if ($proxy->tries >= 4) {
                     $proxy->status = Proxy::status_failed;
                 } else {
                     $proxy->tries = ($proxy->tries + 1);
@@ -757,7 +763,7 @@ class MainController extends Controller
                 curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
                 curl_setopt($ch, CURLOPT_HEADER, 0);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
                 $output = curl_exec($ch);
                 $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
