@@ -555,7 +555,7 @@ class MainController extends Controller
                     ->inRandomOrder()
                     ->first();
                 curl_setopt($ch, CURLOPT_URL, $url);
-                //curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
+                curl_setopt($ch, CURLOPT_PROXY, $randomProxy->proxy);
                 curl_setopt($ch, CURLOPT_USERAGENT, "MozillaXYZ/1.0");
                 curl_setopt($ch, CURLOPT_HEADER, 0);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
